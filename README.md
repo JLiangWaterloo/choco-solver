@@ -2,6 +2,7 @@
 
 [![Gitter](https://badges.gitter.im/Join%20Chat.svg)](https://gitter.im/chocoteam/choco-solver?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge) 
 [![Maven Central](https://maven-badges.herokuapp.com/maven-central/org.choco-solver/choco-solver/badge.svg)](https://maven-badges.herokuapp.com/maven-central/org.choco-solver/choco-solver)
+[![Documentation Status](https://readthedocs.org/projects/choco-solver/badge/?version=latest)](http://choco-solver.readthedocs.org/en/latest/?badge=latest)
 
 [![Build Status](https://travis-ci.org/chocoteam/choco-solver.svg?branch=develop)](https://travis-ci.org/chocoteam/choco-solver) 
 [![codecov.io](https://codecov.io/github/chocoteam/choco-solver/coverage.svg?branch=develop)](https://codecov.io/github/chocoteam/choco-solver?branch=develop)
@@ -33,19 +34,19 @@ Contact: choco@mines-nantes.fr
 ### Overview
 
 ```java
-// 1. Create a Solver
-Solver solver = new Solver("my first problem");
-// 2. Create variables through the variable factory
-IntVar x = VariableFactory.bounded("X", 0, 5, solver);
-IntVar y = VariableFactory.bounded("Y", 0, 5, solver);
+// 1. Create a Model
+Model model = new Model("my first problem");
+// 2. Create variables
+IntVar x = model.intVar("X", 0, 5);
+IntVar y = model.intVar("Y", 0, 5);
 // 3. Create and post constraints by using constraint factories
-solver.post(solver.arithm(x, "+", y, "<", 5));
+x.add(y).lt(5).post();
 // 4. Define the search strategy
-solver.set(ISF.lexico_LB(new IntVar[]{x, y}));
+model.getSolver().set(SearchStrategyFactory.inputOrderLBSearch(x, y));
 // 5. Launch the resolution process
-solver.solve();
-//6. Print search statistics
-Chatterbox.printStatistics(solver);
+model.getSolver().solve();
+// 6. Print search statistics
+model.getSolver().printStatistics();
 ```
 
 <a name="doc"></a>
@@ -87,6 +88,13 @@ Following are code snippets to add on your website to help us promoting Choco3.
 ```md
 [![Choco3](http://choco-solver.org/sites/default/files/banner.svg)](http://choco-solver.org/?utm_source=badge&utm_medium=badge&utm_campaign=badge)
 ```
+
+And thank you for giving back to choco-solver.
+Please meet our team of cho-coders : 
+
+- [@jgFages](https://github.com/jgFages) (Jean-Guillaume Fages)
+- [@cprudhom](https://github.com/cprudhom) (Charles Prud'homme)
+
 
 
 <a name="dow"></a>

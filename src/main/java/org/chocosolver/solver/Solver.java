@@ -40,8 +40,6 @@ import org.chocosolver.solver.objective.ObjectiveManager;
 import org.chocosolver.solver.propagation.IPropagationEngine;
 import org.chocosolver.solver.propagation.NoPropagationEngine;
 import org.chocosolver.solver.propagation.PropagationEngineFactory;
-import org.chocosolver.solver.search.bind.DefaultSearchBinder;
-import org.chocosolver.solver.search.bind.ISearchBinder;
 import org.chocosolver.solver.search.limits.ICounter;
 import org.chocosolver.solver.search.loop.Reporting;
 import org.chocosolver.solver.search.loop.learn.Learn;
@@ -62,7 +60,6 @@ import org.chocosolver.solver.variables.RealVar;
 import org.chocosolver.solver.variables.Variable;
 import org.chocosolver.util.ESat;
 import org.chocosolver.util.criteria.Criterion;
-import org.chocosolver.util.tools.ArrayUtils;
 
 import java.io.PrintStream;
 import java.util.ArrayList;
@@ -246,19 +243,20 @@ public final class Solver implements ISolver, IMeasures, IOutputFactory {
      *
      * Default configuration:
      * - SATISFACTION : Computes a feasible solution. Use while(solve()) to enumerate all solutions.
-     * - OPTIMISATION : If an objective has been defined, searches an optimal solution
-     * (and prove optimality by closing the search space). Then restores the best solution found after solving.
+     * - OPTIMISATION : Computes a feasible solution, wrt to the objective defined. Use while(solve()) to find the optimal solution.
+     * Indeed, each new solution improves the objective. If no new solution is found (and no stop criterion encountered),
+     * the last one is guaranteed to be the optimal one.
      * @return if at least one new solution has been found.
      */
-    public boolean solve(){
+    public boolean solve() {
         // prepare
         boolean satPb = getModel().getResolutionPolicy() == ResolutionPolicy.SATISFACTION;
-        if(getModel().getObjective() == null && !satPb) {
+        if (getModel().getObjective() == null && !satPb) {
             throw new SolverException("No objective variable has been defined whereas policy implies optimization");
         }
         kill = true;
         stop = !canBeRepaired;
-        if(action == initialize){
+        if (action == initialize) {
             searchMonitors.beforeInitialize();
             initialize();
             searchMonitors.afterInitialize();
@@ -282,11 +280,12 @@ public final class Solver implements ISolver, IMeasures, IOutputFactory {
         kill = true;
         boolean left = true;
         while(!stop){
-            if (isStopCriterionMet()) {
+            if (isStopCriterionMet() || Thread.currentThread().isInterrupted()) {
                 stop = true;
             }
             switch (action) {
-                case initialize: throw new UnsupportedOperationException("should not initialize during search loop");
+                case initialize:
+                    throw new UnsupportedOperationException("should not initialize during search loop");
                 case propagate:
                     searchMonitors.beforeDownBranch(left);
                     mMeasures.incDepth();
@@ -329,7 +328,7 @@ public final class Solver implements ISolver, IMeasures, IOutputFactory {
                     }
                     break;
                 case validate:
-                    if(!getModel().getSettings().checkModel(this)){
+                    if (!getModel().getSettings().checkModel(this)) {
                         throw new SolverException("The current solution does not satisfy the checker.\n" +
                                 Reporting.fullReport(mModel));
                     }
@@ -341,6 +340,8 @@ public final class Solver implements ISolver, IMeasures, IOutputFactory {
                     action = repair;
                     stop = solution = true;
                     break;
+                default:
+                    throw new SolverException("Invalid Solver loop action " + action);
             }
         }
         return solution;
@@ -392,15 +393,16 @@ public final class Solver implements ISolver, IMeasures, IOutputFactory {
         }
         // call to HeuristicVal.update(Action.initial_propagation)
         if (M.getChildMoves().size() <= 1 && M.getStrategy() == null) {
+            if (mModel.getSettings().warnUser()) {
+                getErr().printf("No search strategies defined.\nSet to default ones.");
+            }
             defaultSearch = true;
-            ISearchBinder binder = mModel.getSettings().getSearchBinder();
-            binder.configureSearch(mModel);
+            set(mModel.getSettings().makeDefaultSearch(mModel));
         }
         if (completeSearch && !defaultSearch) {
             AbstractStrategy<Variable> declared = M.getStrategy();
-            DefaultSearchBinder dbinder = new DefaultSearchBinder();
-            AbstractStrategy[] complete = dbinder.getDefault(mModel);
-            mModel.getSolver().set(ArrayUtils.append(new AbstractStrategy[]{declared}, complete));
+            AbstractStrategy complete = mModel.getSettings().makeDefaultSearch(mModel);
+            set(declared, complete);
         }
         if (!M.init()) { // the initialisation of the Move and strategy can detect inconsistency
             mModel.getEnvironment().worldPop();
@@ -409,7 +411,6 @@ public final class Solver implements ISolver, IMeasures, IOutputFactory {
             getMeasures().incFailCount();
             stop = true;
         }
-        mMeasures.updateTime();
         for (Criterion c : criteria) {
             if (c instanceof ICounter) {
                 ((ICounter) c).init();
@@ -423,7 +424,6 @@ public final class Solver implements ISolver, IMeasures, IOutputFactory {
      * - update statistics
      */
     private void closeSearch() {
-        mMeasures.updateTime();
         kill = false;
         feasible = FALSE;
         if (mMeasures.getSolutionCount() > 0) {
@@ -450,6 +450,7 @@ public final class Solver implements ISolver, IMeasures, IOutputFactory {
         // if a resolution has already been done
         if (rootWorldIndex > -1) {
             mModel.getEnvironment().worldPopUntil(rootWorldIndex);
+            engine.flush();
             dpath.synchronize();
             feasible = ESat.UNDEFINED;
             action = initialize;
@@ -482,7 +483,7 @@ public final class Solver implements ISolver, IMeasures, IOutputFactory {
         searchMonitors.beforeRestart();
         restoreRootNode();
         mModel.getEnvironment().worldPush();
-        mModel.getSolver().getMeasures().incRestartCount();
+        getMeasures().incRestartCount();
         try {
             objectivemanager.postDynamicCut();
             P.execute(this);
@@ -517,7 +518,7 @@ public final class Solver implements ISolver, IMeasures, IOutputFactory {
     /**
      * @return the current propagate
      */
-    public Propagate getPropagate(){
+    public Propagate getPropagate() {
         return P;
     }
 
@@ -538,7 +539,7 @@ public final class Solver implements ISolver, IMeasures, IOutputFactory {
     /**
      * @return the backtracking environment used for this solver
      */
-    public IEnvironment getEnvironment(){
+    public IEnvironment getEnvironment() {
         return getModel().getEnvironment();
     }
 
@@ -553,8 +554,8 @@ public final class Solver implements ISolver, IMeasures, IOutputFactory {
      * @param <V> kind of variables the search strategy deals with
      * @return the current search strategy in use
      */
-    public <V extends Variable>  AbstractStrategy<V> getStrategy() {
-        if(M.getChildMoves().size()>1 && mModel.getSettings().warnUser()){
+    public <V extends Variable> AbstractStrategy<V> getStrategy() {
+        if (M.getChildMoves().size() > 1 && mModel.getSettings().warnUser()) {
             err.print("This search loop is based on a sequential Move, the strategy returned may not reflect the reality.");
         }
         return M.getStrategy();
@@ -567,7 +568,7 @@ public final class Solver implements ISolver, IMeasures, IOutputFactory {
      * @return the currently used objective manager
      */
     @SuppressWarnings("unchecked")
-    public <V extends Variable, N extends Number> ObjectiveManager<V,N> getObjectiveManager() {
+    public <V extends Variable, N extends Number> ObjectiveManager<V, N> getObjectiveManager() {
         return objectivemanager;
     }
 
@@ -615,7 +616,7 @@ public final class Solver implements ISolver, IMeasures, IOutputFactory {
     /**
      * @return <tt>true</tt> if the resolution already began, <tt>false</tt> otherwise
      */
-    public boolean hasResolutionBegun(){
+    public boolean hasResolutionBegun() {
         return action != initialize;
     }
 
@@ -626,6 +627,11 @@ public final class Solver implements ISolver, IMeasures, IOutputFactory {
      */
     public MeasuresRecorder getMeasures() {
         return mMeasures;
+    }
+
+    @Override
+    public IMeasures copyMeasures() {
+        return mMeasures.copyMeasures();
     }
 
     /**
@@ -674,7 +680,7 @@ public final class Solver implements ISolver, IMeasures, IOutputFactory {
     public ESat isSatisfied() {
         if (feasible != ESat.FALSE) {
             int OK = 0;
-            for (Constraint c:mModel.getCstrs()) {
+            for (Constraint c : mModel.getCstrs()) {
                 ESat satC = c.isSatisfied();
                 if (ESat.FALSE == satC) {
                     System.err.println(String.format("FAILURE >> %s (%s)", c.toString(), satC));
@@ -707,7 +713,7 @@ public final class Solver implements ISolver, IMeasures, IOutputFactory {
      * Replaces the current propagate with {@code p}
      * @param p the new propagate to apply
      */
-    public void set(Propagate p){
+    public void set(Propagate p) {
         this.P = p;
     }
 
@@ -724,12 +730,12 @@ public final class Solver implements ISolver, IMeasures, IOutputFactory {
      * @param m the new move to apply
      */
     public void set(Move... m) {
-        if(m == null) {
+        if (m == null) {
             this.M = null;
-        }else if (m.length == 1){
+        } else if (m.length == 1) {
             this.M = m[0];
-        }else{
-            this.M = new MoveSeq(getModel(),m);
+        } else {
+            this.M = new MoveSeq(getModel(), m);
         }
     }
 
@@ -761,7 +767,7 @@ public final class Solver implements ISolver, IMeasures, IOutputFactory {
                     "A strategy must be attached to each of them independently, and it cannot be achieved calling this method." +
                     "An iteration over it child moves is needed: this.getMove().getChildMoves().");
         } else {
-            M.setStrategy(strategies.length == 1?strategies[0]: SearchStrategyFactory.sequencer(strategies));
+            M.setStrategy(strategies.length == 1 ? strategies[0] : SearchStrategyFactory.sequencer(strategies));
         }
     }
 
@@ -814,17 +820,21 @@ public final class Solver implements ISolver, IMeasures, IOutputFactory {
      * @see #removeStopCriterion(Criterion...)
      * @see #removeAllStopCriteria()
      */
-    public void addStopCriterion(Criterion... criterion){
-        Collections.addAll(criteria, criterion);
+    public void addStopCriterion(Criterion... criterion) {
+        if(criterion!=null) {
+            Collections.addAll(criteria, criterion);
+        }
     }
 
     /**
      * Removes one or many stop criterion from the one to declare to the search loop.
      * @param criterion criterion to remove
      */
-    public void removeStopCriterion(Criterion... criterion){
-        for(Criterion c:criterion) {
-            criteria.remove(c);
+    public void removeStopCriterion(Criterion... criterion) {
+        if(criterion!=null) {
+            for (Criterion c : criterion) {
+                criteria.remove(c);
+            }
         }
     }
 
@@ -860,7 +870,7 @@ public final class Solver implements ISolver, IMeasures, IOutputFactory {
      * Removes a search monitors from the ones to plug when the search will start.
      * @param sm a search monitor to be unplugged in the solver
      */
-    public void unplugMonitor(ISearchMonitor sm){
+    public void unplugMonitor(ISearchMonitor sm) {
         searchMonitors.remove(sm);
     }
 
@@ -900,6 +910,11 @@ public final class Solver implements ISolver, IMeasures, IOutputFactory {
     @Override
     public float getTimeCount() {
         return getMeasures().getTimeCount();
+    }
+
+    @Override
+    public long getTimeCountInNanoSeconds() {
+        return getMeasures().getTimeCountInNanoSeconds();
     }
 
     @Override
@@ -955,6 +970,11 @@ public final class Solver implements ISolver, IMeasures, IOutputFactory {
     @Override
     public Number getBestSolutionValue() {
         return getMeasures().getBestSolutionValue();
+    }
+
+    @Override
+    public Solver getSolver() {
+        return this;
     }
 
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////

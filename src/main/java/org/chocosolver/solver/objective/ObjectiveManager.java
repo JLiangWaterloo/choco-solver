@@ -33,7 +33,6 @@ import org.chocosolver.solver.ICause;
 import org.chocosolver.solver.ResolutionPolicy;
 import org.chocosolver.solver.exception.ContradictionException;
 import org.chocosolver.solver.explanations.RuleStore;
-import org.chocosolver.solver.search.strategy.decision.Decision;
 import org.chocosolver.solver.variables.IntVar;
 import org.chocosolver.solver.variables.RealVar;
 import org.chocosolver.solver.variables.Variable;
@@ -149,16 +148,6 @@ public class ObjectiveManager<V extends Variable, N extends Number> implements I
         return policy != ResolutionPolicy.SATISFACTION;
     }
 
-    /**
-     * Updates the lower (or upper) bound of the objective variable, considering its best know value.
-     *
-     * @param decision decision to apply
-     * @throws org.chocosolver.solver.exception.ContradictionException if this application leads to a contradiction  @param decision
-     */
-    public void apply(Decision decision) throws ContradictionException {
-        decision.apply();
-    }
-
     @Override
     public boolean why(RuleStore ruleStore, IntVar var, IEventType evt, int value) {
         return isOptimization() && ruleStore.addBoundsRule((IntVar) objective);
@@ -204,13 +193,9 @@ public class ObjectiveManager<V extends Variable, N extends Number> implements I
             assert objective.isInstantiated();
             N newVal = getObjUB();
             if (policy == ResolutionPolicy.MINIMIZE) {
-                if(bestProvedUB == null || newVal.doubleValue() < bestProvedUB.doubleValue()) {
-                    bestProvedUB = newVal;
-                }
+                updateBestUB(newVal);
             } else {
-                if(bestProvedLB == null || newVal.doubleValue() > bestProvedLB.doubleValue()) {
-                    bestProvedLB = newVal;
-                }
+                updateBestLB(newVal);
             }
         }
     }
@@ -258,7 +243,7 @@ public class ObjectiveManager<V extends Variable, N extends Number> implements I
      *
      * @param lb lower bound
      */
-    public void updateBestLB(N lb) {
+    public synchronized void updateBestLB(N lb) {
         if (bestProvedLB == null) {
             // this may happen with multi-thread resolution
             // when one thread find a model before one other is being launched
@@ -274,7 +259,7 @@ public class ObjectiveManager<V extends Variable, N extends Number> implements I
      *
      * @param ub upper bound
      */
-    public void updateBestUB(N ub) {
+    public synchronized void updateBestUB(N ub) {
         if (bestProvedUB == null) {
             // this may happen with multi-thread resolution
             // when one thread find a model before one other is being launched

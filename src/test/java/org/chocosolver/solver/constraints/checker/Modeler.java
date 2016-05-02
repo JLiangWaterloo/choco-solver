@@ -472,7 +472,7 @@ public interface Modeler {
                 }
             }
             s.atLeastNValues(decvars, vars[n - 1], false).post();
-            s.atMostNVvalues(decvars, vars[n - 1], false).post();
+            s.atMostNValues(decvars, vars[n - 1], false).post();
             for (String st : (String[]) parameters) {
                 switch (st) {
                     case "at_least_AC":
@@ -669,7 +669,7 @@ public interface Modeler {
                 h[i] = vars[i + 3 * k];
             }
             IntVar capa = vars[vars.length - 1];
-            model.cumulative(tasks, h, capa, true).post();
+            model.cumulative(tasks, h, capa, (boolean)parameters).post();
             model.getSolver().set(randomSearch(vars, 0));
             return model;
         }

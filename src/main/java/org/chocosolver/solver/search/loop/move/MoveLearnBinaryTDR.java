@@ -37,7 +37,9 @@ import org.chocosolver.solver.Solver;
 import org.chocosolver.solver.explanations.Explanation;
 import org.chocosolver.solver.search.loop.learn.LearnExplained;
 import org.chocosolver.solver.search.strategy.assignments.DecisionOperator;
-import org.chocosolver.solver.search.strategy.decision.*;
+import org.chocosolver.solver.search.strategy.decision.Decision;
+import org.chocosolver.solver.search.strategy.decision.DecisionPath;
+import org.chocosolver.solver.search.strategy.decision.IntDecision;
 import org.chocosolver.solver.search.strategy.strategy.AbstractStrategy;
 import org.chocosolver.solver.variables.IntVar;
 import org.chocosolver.solver.variables.Variable;
@@ -62,48 +64,43 @@ public class MoveLearnBinaryTDR extends LearnExplained implements Move {
     /**
      * Internal reference to Move for simulating multiple extension.
      */
-    final Move move;
+    private final Move move;
 
     /**
      * List of "n" last conflicts.
      */
-    List<List<IntDecision>> gamma;
+    private List<List<IntDecision>> gamma;
 
     /**
      * Limited size of conflicts to store in the tabu list.
      */
-    int s;
+    private int s;
 
     /**
      * The neigbhor of the current decision path.
      */
-    IntDecision[] neighbor;
+    private IntDecision[] neighbor;
 
     /**
      * Current decision in CD.
      */
-    int current;
+    private int current;
 
     /**
      * Ordered list (decreasing weight) of decisions in k.
      */
-    TIntObjectHashMap<TIntObjectHashMap<TObjectDoubleMap<DecisionOperator>>> weights;
+    private TIntObjectHashMap<TIntObjectHashMap<TObjectDoubleMap<DecisionOperator>>> weights;
 
     /**
      * An array to maintain ordered the index of decision in the conflict.
      */
-    TreeMap<Integer, Double> L;
+    private TreeMap<Integer, Double> L;
 
     /**
      * Indicates that no neighnor has been found, and the search can then stop.
      */
-    boolean stop = false;
+    private boolean stop = false;
 
-    /**
-     * @param aModel
-     * @param move
-     * @param tabuListSize
-     */
     private MoveLearnBinaryTDR(Model aModel, Move move, int tabuListSize) {
         super(aModel, false, false);
         this.move = move;
@@ -121,7 +118,7 @@ public class MoveLearnBinaryTDR extends LearnExplained implements Move {
         // as we observe the number of backtracks, no limit can be reached on extend()
         if (current < neighbor.length) {
             DecisionPath dp = solver.getDecisionPath();
-            assert neighbor[current++] != null;
+            assert neighbor[current] != null;
             dp.pushDecision(neighbor[current++]);
             solver.getEnvironment().worldPush();
             extend = true;

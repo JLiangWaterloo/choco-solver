@@ -45,12 +45,12 @@ public class LogStatEveryXXms implements IMonitorInitialize, IMonitorClose {
     /**
      * A thread which prints short line statistics to {@link Solver#getOut()}.
      */
-    Thread printer;
+    private Thread printer;
 
     /**
      * A boolean to kill the printer when the resolution ends.
      */
-    volatile boolean alive;
+    private volatile boolean alive;
 
     /**
      * Create a monitor which outputs shot-line statistics every <i>duration</i> milliseconds
@@ -68,8 +68,7 @@ public class LogStatEveryXXms implements IMonitorInitialize, IMonitorClose {
                     sleep(duration);
                     //noinspection InfiniteLoopStatement
                     do {
-                        solver.getMeasures().updateTime();
-                        solver.getOut().println(String.format(">> %s", solver.getMeasures().toOneLineString()));
+                        solver.getOut().println(String.format(">> %s", solver.toOneLineString()));
                         sleep(duration);
                     } while (alive);
                 } catch (InterruptedException ignored) {

@@ -60,15 +60,15 @@ public class DecisionPath extends DecisionMaker implements Serializable {
     /**
      * Current decision path.
      */
-    List<Decision> decisions;
+    private List<Decision> decisions;
     /**
      * Store the sizes of {@link #decisions} during search, to evaluate which decisions are part of the same level.
      */
-    IStateInt mLevel;
+    protected IStateInt mLevel;
     /**
      * Indices of level in {@link #decisions}
      */
-    int[] levels;
+    protected int[] levels;
 
 
     /**
@@ -210,7 +210,7 @@ public class DecisionPath extends DecisionMaker implements Serializable {
                 decision = decisions.get(i);
                 st.append(" /\\ ").append(decision.toString());
             }
-        } else {
+        } else if(f < t){
             decision = decisions.get(f);
             st.append(String.format("[%d/%d] %s",
                     decision.getArity() - decision.triesLeft() + 1, decision.getArity(), decision.toString())

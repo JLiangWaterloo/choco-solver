@@ -29,7 +29,6 @@
  */
 package org.chocosolver.solver.propagation.hardcoded;
 
-import org.chocosolver.memory.IEnvironment;
 import org.chocosolver.solver.ICause;
 import org.chocosolver.solver.Model;
 import org.chocosolver.solver.Settings;
@@ -77,49 +76,49 @@ public class SevenQueuesPropagatorEngine implements IPropagationEngine {
     /**
      * The strategy to use for idempotency (for debugging purpose)
      */
-    final Settings.Idem idemStrat;
+    private final Settings.Idem idemStrat;
 
     /**
      * Internal unique contradiction exception, used on propagation failures
      */
-    protected final ContradictionException exception;
+    private final ContradictionException exception;
     /**
      * The model declaring this engine
      */
     private final Model model;
     /**
-     * Backtrackable environment attached to this model
-     */
-    protected final IEnvironment environment;
-    /**
      * The array of propagators to execute
      */
-    protected Propagator[] propagators;
+    private Propagator[] propagators;
     /**
      * The main structure of this engine: seven circular queues,
      * each of them is dedicated to store propagator to execute wrt their priority.
      */
-    protected final CircularQueue<Propagator>[] pro_queue;
+    private final CircularQueue<Propagator>[] pro_queue;
     /**
      * The last propagator executed
      */
-    protected Propagator lastProp;
+    private Propagator lastProp;
     /**
      * Mapping between propagator ID and its absolute index
      */
-    protected IntMap p2i; //
+    private IntMap p2i;
     /**
      * One bit per queue: true if the queue is not empty.
      */
-    protected int notEmpty;
+    private int notEmpty;
     /**
      * Per propagator: indicates whether it is scheduled (and in which queue) or not.
      */
-    protected short[] scheduled;
+    private short[] scheduled;
     /**
      * Per propagator: set of (variable) events to propagate
      */
-    protected IntCircularQueue[] eventsets;
+    private IntCircularQueue[] eventsets;
+    /**
+     * PropagatorEventType's mask for delayed propagation
+     */
+    private int delayedPropagationType;
     /**
      * Set to <tt>true</tt> once {@link #initialize()} has been called.
      */
@@ -128,16 +127,16 @@ public class SevenQueuesPropagatorEngine implements IPropagationEngine {
      * Per propagator (i) and per variable of the propagator (j): modification event mask of variable j from propagator i
      * since the last propagation of propagator j.
      */
-    protected int[][] eventmasks;
+    private int[][] eventmasks;
     /**
      * Per propagator: counter of events to be propagated
      */
-    protected int[] pendingEvt;
+    private int[] pendingEvt;
 
     /**
      * A specific object to deal with first propagation
      */
-    final PropagationTrigger trigger; // an object that starts the propagation
+    private final PropagationTrigger trigger; // an object that starts the propagation
 
 
     /**
@@ -149,7 +148,6 @@ public class SevenQueuesPropagatorEngine implements IPropagationEngine {
      */
     public SevenQueuesPropagatorEngine(Model model) {
         this.exception = new ContradictionException();
-        this.environment = model.getEnvironment();
         this.trigger = new PropagationTrigger(this, model);
         this.idemStrat = model.getSettings().getIdempotencyStrategy();
         this.model = model;
@@ -235,6 +233,7 @@ public class SevenQueuesPropagatorEngine implements IPropagationEngine {
                 // revision of the variable
                 aid = p2i.get(lastProp.getId());
                 scheduled[aid] = 0;
+                delayedPropagationType = 0;
                 if (lastProp.reactToFineEvent()) {
                     evtset = eventsets[aid];
                     while (evtset.size() > 0) {
@@ -250,6 +249,13 @@ public class SevenQueuesPropagatorEngine implements IPropagationEngine {
                         pendingEvt[aid]--;
                         // run propagation on the specific event
                         lastProp.propagate(v, mask);
+                    }
+                    // now we can check whether a delayed propagation has been scheduled
+                    if(delayedPropagationType > 0){
+                        if (DEBUG) {
+                            IPropagationEngine.Trace.printPropagation(null, lastProp, COLOR);
+                        }
+                        lastProp.propagate(delayedPropagationType);
                     }
                 } else if (lastProp.isActive()) { // need to be checked due to views
                     //assert lastProp.isActive() : "propagator is not active:" + lastProp;
@@ -289,6 +295,7 @@ public class SevenQueuesPropagatorEngine implements IPropagationEngine {
             }
             notEmpty = notEmpty & ~(1 << i);
         }
+        lastProp = null;
     }
 
     private void flush(int aid) {
@@ -354,12 +361,9 @@ public class SevenQueuesPropagatorEngine implements IPropagationEngine {
 
     @Override
     public void delayedPropagation(Propagator propagator, PropagatorEventType type) throws ContradictionException {
-        if (pendingEvt[p2i.get(propagator.getId())] == 0) {
-            if (DEBUG) {
-                IPropagationEngine.Trace.printPropagation(null, propagator, COLOR);
-            }
-            propagator.propagate(type.getMask());
-        }
+        assert propagator == lastProp;
+        assert delayedPropagationType == 0 || delayedPropagationType == type.getMask();
+        delayedPropagationType = type.getMask();
     }
 
     @Override

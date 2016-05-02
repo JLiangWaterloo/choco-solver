@@ -37,7 +37,10 @@ import org.chocosolver.solver.constraints.Operator;
 import org.chocosolver.solver.search.loop.monitors.IMonitorSolution;
 import org.chocosolver.solver.variables.IntVar;
 import org.chocosolver.solver.variables.Variable;
+import org.chocosolver.util.tools.ArrayUtils;
 
+import java.util.Collections;
+import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
 
@@ -54,23 +57,23 @@ public class ParetoOptimizer implements IMonitorSolution {
     //***********************************************************************************
 
     // Set of incomparable and Pareto-best solutions
-    LinkedList<Solution> paretoFront;
+    private LinkedList<Solution> paretoFront;
 
     // Variables to store in each solution (decision variables by default)
-   	Variable[] variablesToStore;
-    Model model;
+   	private Variable[] variablesToStore;
+    private Model model;
 
     // Allow to recycle (dominated) Solution objects
-    LinkedList<Solution> pool = new LinkedList<>();
+    private LinkedList<Solution> pool = new LinkedList<>();
 
     // objective function
-    ResolutionPolicy policy;
-    IntVar[] objectives;
-    int n;
+    private ResolutionPolicy policy;
+    private IntVar[] objectives;
+    private int n;
 
     // to post dynamical constraints
-    int[] vals, lits;
-    PropSat psat;
+    private int[] vals, lits;
+    private PropSat psat;
 
     //***********************************************************************************
     // CONSTRUCTOR
@@ -88,10 +91,13 @@ public class ParetoOptimizer implements IMonitorSolution {
      *
      * @param policy    optimization policy : either MINIMIZE or MAXIMIZE
      * @param objectives    objective variables (must all be optimized in the same direction)
-     * @param variablesToStore set of variables to store in every solution (takes decision variables by default)
+     * @param otherVariablesToStore variables, other than objectives, to store in every solution
+     *                              (stores objective variables only by default)
      */
-    public ParetoOptimizer(final ResolutionPolicy policy, final IntVar[] objectives, Variable... variablesToStore) {
-        this.variablesToStore = variablesToStore;
+    public ParetoOptimizer(final ResolutionPolicy policy, final IntVar[] objectives, Variable... otherVariablesToStore) {
+        HashSet<Variable> vrs = new HashSet<>();
+        Collections.addAll(vrs, ArrayUtils.append(otherVariablesToStore, objectives));
+        this.variablesToStore = vrs.toArray(new Variable[vrs.size()]);
         this.paretoFront = new LinkedList<>();
         this.objectives = objectives.clone();
         this.policy = policy;

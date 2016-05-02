@@ -31,12 +31,21 @@ package org.chocosolver.solver.search.measure;
 
 
 import org.chocosolver.solver.Model;
+import org.chocosolver.solver.Solver;
+
+import java.lang.reflect.Field;
+
 /**
  * Object which stores resolution information to get statistics
  *
  * @author Charles Prud'Homme
+ * @since 3.0.0
  */
 public final class MeasuresRecorder implements IMeasures, Cloneable {
+
+    //***********************************************************************************
+    // VARIABLE
+    //***********************************************************************************
 
     /**
      * To transform time from nanoseconds to seconds
@@ -46,70 +55,74 @@ public final class MeasuresRecorder implements IMeasures, Cloneable {
     /**
      * Indicates if an objective is declared (<tt>false</tt> means satisfaction problem).
      */
-    public boolean hasObjective;
+    private boolean hasObjective;
 
     /**
      * Indicates if the optimal value has been proven for the objective (set to <tt>true</tt>).
      */
-    public boolean objectiveOptimal;
+    private boolean objectiveOptimal;
 
     /**
      * Counts the number of solutions found so far.
      */
-    public long solutionCount;
+    private long solutionCount;
 
     /**
      * Counts the time spent so far, starting from solver construction call.
      */
-    public long timeCount;
+    private long timeCount;
 
     /**
      * Counts the time spent into reading the model
      */
-    public long readingTimeCount;
+    private long readingTimeCount;
 
     /**
      * Counts the number of nodes opened so far.
      */
-    public long nodeCount;
+    private long nodeCount;
 
     /**
      * Counts the number of backtracks done so far.
      */
-    public long backtrackCount;
+    private long backtrackCount;
 
     /**
      * Counts the number of failures encountered so far.
      */
-    public long failCount;
+    private long failCount;
 
     /**
      * Counts the number of restarts done so far.
      */
-    public long restartCount;
+    private long restartCount;
 
     /**
      * Stores the overall maximum depth
      */
-    public long maxDepth;
+    private long maxDepth;
 
     /**
      * Stores the current depth
      */
-    public long depth;
+    private long depth;
 
     /**
      * When the clock watch starts
      */
-    protected long startingTime;
+    private long startingTime;
 
     /**
      * The solver to measure
      */
-    protected Model model;
+    private Model model;
+
+    //***********************************************************************************
+    // CONSTRUCTOR
+    //***********************************************************************************
 
     /**
-     * Create a measures recorder observing a <code>solver</code>
+     * Create a measures recorder observing a {@code solver}
      * @param model the solver to observe
      */
     public MeasuresRecorder(Model model) {
@@ -117,27 +130,88 @@ public final class MeasuresRecorder implements IMeasures, Cloneable {
         this.model = model;
     }
 
+    //****************************************************************************************************************//
+    //**************************************** GETTERS ***************************************************************//
+    //****************************************************************************************************************//
+
+    @Override
+    public long getBackTrackCount() {
+        return backtrackCount;
+    }
+
+    @Override
+    public long getFailCount() {
+        return failCount;
+    }
+
+    @Override
+    public long getNodeCount() {
+        return nodeCount;
+    }
+
+    @Override
+    public float getTimeCount() {
+        updateTime();
+        return timeCount / MeasuresRecorder.IN_SEC;
+    }
+
+    @Override
+    public long getTimeCountInNanoSeconds() {
+        updateTime();
+        return timeCount;
+    }
+
+    @Override
+    public float getReadingTimeCount() {
+        return readingTimeCount / MeasuresRecorder.IN_SEC;
+    }
 
     /**
-     * Clones the IMeasure object (copy every measure)
-     *
-     * @return a new instance of IMeasure
+     * set the reading time count
+     * @param time time needed to read the model
      */
-    public MeasuresRecorder duplicate() {
-        MeasuresRecorder mr = new MeasuresRecorder(model);
-        mr.hasObjective = hasObjective;
-        mr.objectiveOptimal = objectiveOptimal;
-        mr.solutionCount = solutionCount;
-        mr.timeCount = timeCount;
-        mr.readingTimeCount = readingTimeCount;
-        mr.nodeCount = nodeCount;
-        mr.backtrackCount = backtrackCount;
-        mr.failCount = failCount;
-        mr.restartCount = restartCount;
-        mr.startingTime = startingTime;
-        mr.maxDepth = maxDepth;
-        mr.depth = depth;
-        return mr;
+    public void setReadingTimeCount(long time) {
+        readingTimeCount = time;
+    }
+
+    @Override
+    public long getRestartCount() {
+        return restartCount;
+    }
+
+    @Override
+    public long getMaxDepth() {
+        return maxDepth;
+    }
+
+    @Override
+    public long getCurrentDepth() {
+        return depth;
+    }
+
+    @Override
+    public boolean isObjectiveOptimal() {
+        return objectiveOptimal;
+    }
+
+    @Override
+    public boolean hasObjective() {
+        return hasObjective;
+    }
+
+    @Override
+    public Number getBestSolutionValue() {
+        return model.getSolver().getObjectiveManager().getBestSolutionValue();
+    }
+
+    @Override
+    public long getTimestamp() {
+        return nodeCount + backtrackCount;
+    }
+
+    @Override
+    public Solver getSolver() {
+        return model.getSolver();
     }
 
     //****************************************************************************************************************//
@@ -180,88 +254,12 @@ public final class MeasuresRecorder implements IMeasures, Cloneable {
     }
 
     //****************************************************************************************************************//
-    //**************************************** GETTERS ***************************************************************//
-    //****************************************************************************************************************//
-
-    @Override
-    public long getBackTrackCount() {
-        return backtrackCount;
-    }
-
-    @Override
-    public long getFailCount() {
-        return failCount;
-    }
-
-    @Override
-    public long getNodeCount() {
-        return nodeCount;
-    }
-
-    @Override
-    public float getTimeCount() {
-        return timeCount / IN_SEC;
-    }
-
-    /**
-     * Returns the elapsed time in nanoseconds
-     * @return the elapsed time in nanoseconds
-     */
-    public long getElapsedTimeInNanoseconds() {
-        return timeCount;
-    }
-
-    @Override
-    public float getReadingTimeCount() {
-        return readingTimeCount / IN_SEC;
-    }
-
-    /**
-     * set the reading time count
-     * @param time time needed to read the model
-     */
-    public void setReadingTimeCount(long time) {
-        this.readingTimeCount = time;
-    }
-
-    @Override
-    public long getRestartCount() {
-        return restartCount;
-    }
-
-    @Override
-    public long getMaxDepth() {
-        return maxDepth;
-    }
-
-    @Override
-    public long getCurrentDepth() {
-        return depth;
-    }
-
-    @Override
-    public boolean isObjectiveOptimal() {
-        return objectiveOptimal;
-    }
-
-    @Override
-    public boolean hasObjective() {
-        return hasObjective;
-    }
-
-    @Override
-    public Number getBestSolutionValue() {
-        return model.getSolver().getObjectiveManager().getBestSolutionValue();
-    }
-
-    @Override
-    public long getTimestamp() {
-        return nodeCount + backtrackCount;
-    }
-
-    //****************************************************************************************************************//
     //**************************************** INCREMENTERS **********************************************************//
     //****************************************************************************************************************//
+
+    private void updateTime() {
+        timeCount = System.nanoTime() - startingTime;
+    }
 
     /**
      * increment node counter
@@ -305,14 +303,14 @@ public final class MeasuresRecorder implements IMeasures, Cloneable {
     /**
      * Increments current depth
      */
-    public void incDepth(){
+    public void incDepth() {
         depth++;
     }
 
     /**
      * Decrements current depth
      */
-    public void decDepth(){
+    public void decDepth() {
         depth--;
     }
 
@@ -323,70 +321,29 @@ public final class MeasuresRecorder implements IMeasures, Cloneable {
         startingTime = System.nanoTime();
     }
 
-    /**
-     * Update resolution time
-     */
-    public void updateTime() {
-        timeCount = System.nanoTime() - startingTime;
-    }
-
-    //****************************************************************************************************************//
-    //**************************************** PRINTERS **************************************************************//
-    //****************************************************************************************************************//
-
-    /**
-     * @return statistic values only
-     */
-    public Number[] toArray() {
-        return new Number[]{
-                getSolutionCount(),
-                getReadingTimeCount(),
-                getTimeCount(),
-                hasObjective() ? getBestSolutionValue() : 0,
-                getNodeCount(),
-                getBackTrackCount(),
-                getFailCount(),
-                getRestartCount()
-        };
-    }
-
-    /**
-     * @return a summary of recorded statistics
-     */
-    public String toOneLineString() {
-        updateTime();
-        StringBuilder st = new StringBuilder(256);
-        st.append("Model[").append(model.getName()).append("], ");
-        st.append(String.format("%d Solutions, ", solutionCount));
-        if (hasObjective()) {
-            st.append(model.getSolver().getObjectiveManager()).append(", ");
+    @Override
+    public IMeasures copyMeasures() {
+        MeasuresRecorder ret = new MeasuresRecorder(model);
+        for (Field f : this.getClass().getDeclaredFields()) {
+            // XXX
+            if (!f.isAccessible()) {
+                f.setAccessible(true);
+            }
+            if (f.getType().isPrimitive()) {
+                try {
+                    f.set(ret, f.get(this));
+                } catch (IllegalArgumentException | IllegalAccessException e) {
+                    // XXX
+                    e.printStackTrace();
+                }
+            } else {
+                // TODO what if the type is not primitive ?
+            }
         }
-        st.append(String.format("Resolution time %.3fs, %d Nodes (%,.1f n/s), %d Backtracks, %d Fails, %d Restarts",
-                getTimeCount(),
-                getNodeCount(),
-                getNodeCount() / getTimeCount(),
-                getBackTrackCount(),
-                getFailCount(),
-                getRestartCount()));
-        return st.toString();
+        return ret;
     }
 
-    /**
-     * @return statistics in a CSV format
-     */
-    public String toCSV() {
-        updateTime();
-        // solutionCount;buildingTime(sec);initTime(sec);initPropag(sec);totalTime(sec);objective;nodes;backtracks;fails;restarts;fineProp;coarseProp;
-        return String.format("%d;%.3f;%.3f;%e;%d;%d;%d;%d;",
-                getSolutionCount(),
-                getReadingTimeCount(),
-                getTimeCount(),
-                hasObjective() ? getBestSolutionValue().doubleValue() : 0,
-                getNodeCount(),
-                getBackTrackCount(),
-                getFailCount(),
-                getRestartCount());
-    }
+    //****************************************************************************************************************//
 
     @Override
     public String toString() {
@@ -398,7 +355,7 @@ public final class MeasuresRecorder implements IMeasures, Cloneable {
         } else if (model.getSolver().hasEndedUnexpectedly()) {
             st.append("- Incomplete search - Unexpected interruption.\n");
         } else {
-            if(model.getSolver().isSearchCompleted()) {
+            if (model.getSolver().isSearchCompleted()) {
                 st.append("- Complete search - ");
             }
             if (solutionCount == 0) {

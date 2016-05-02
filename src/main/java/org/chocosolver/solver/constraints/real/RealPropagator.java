@@ -49,10 +49,9 @@ public class RealPropagator extends Propagator<RealVar> {
     // VARIABLES
     //***********************************************************************************
 
-    final Ibex ibex;
-    final String functions;
-    final int option;
-    final int contractorIdx;
+    private final Ibex ibex;
+    private final String functions;
+    private final int contractorIdx;
 
     //***********************************************************************************
     // CONSTRUCTOR
@@ -81,8 +80,7 @@ public class RealPropagator extends Propagator<RealVar> {
         super(vars, PropagatorPriority.LINEAR, false);
         this.ibex = model.getIbex();
         this.functions = functions;
-        this.option = options;
-        this.contractorIdx = ibex.add_contractor(vars.length, functions, option);
+        this.contractorIdx = ibex.add_contractor(vars.length, functions, options);
     }
 
     //***********************************************************************************
@@ -106,6 +104,7 @@ public class RealPropagator extends Propagator<RealVar> {
             case Ibex.FAIL:
                  // "Ibex failed"
                 fails();
+                break;
             case Ibex.CONTRACT:
                 for (int i = 0; i < vars.length; i++) {
                     vars[i].updateBounds(domains[2 * i], domains[2 * i + 1], this);
@@ -117,8 +116,8 @@ public class RealPropagator extends Propagator<RealVar> {
                 }
                 setPassive();
                 break;
-            case Ibex.NOT_SIGNIFICANT:
-            default:
+            case Ibex.NOT_SIGNIFICANT: break;
+            default: break;
         }
     }
 
@@ -148,4 +147,8 @@ public class RealPropagator extends Propagator<RealVar> {
         return ESat.UNDEFINED;
     }
 
+    @Override
+    public String toString() {
+        return "RealPropagator : "+functions+super.toString();
+    }
 }

@@ -243,7 +243,7 @@ public class IntConstraintExamples {
         Model model = new Model();
         IntVar[] XS = model.intVarArray("XS", 5, 0, 3, false);
         model.allDifferentUnderCondition(XS,
-                x -> !x.contains(1) && !x.contains(3)).post();
+                x -> !x.contains(1) && !x.contains(3), true).post();
         model.getSolver().showSolutions();
         while (model.solve()) ;
     }
@@ -283,7 +283,7 @@ public class IntConstraintExamples {
         Model model = new Model();
         IntVar[] XS = model.intVarArray("XS", 4, 0, 2, false);
         IntVar N = model.intVar("N", 1, 3, false);
-        model.atMostNVvalues(XS, N, false).post();
+        model.atMostNValues(XS, N, false).post();
         model.getSolver().showSolutions();
         while (model.solve()) ;
     }
@@ -373,7 +373,7 @@ public class IntConstraintExamples {
             HE[i] = model.intVar("HE_" + i, i - 1, i + 1, true);
         }
         IntVar CA = model.intVar("CA", 1, 3, false);
-        model.cumulative(TS, HE, CA, true).post();
+        model.cumulative(TS, HE, CA).post();
         model.getSolver().showSolutions();
         while (model.solve()) ;
     }

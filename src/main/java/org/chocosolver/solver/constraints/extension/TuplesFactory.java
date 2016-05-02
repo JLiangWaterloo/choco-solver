@@ -31,6 +31,7 @@ package org.chocosolver.solver.constraints.extension;
 
 import org.chocosolver.solver.Settings;
 import org.chocosolver.solver.constraints.Operator;
+import org.chocosolver.solver.exception.SolverException;
 import org.chocosolver.solver.variables.IntVar;
 import org.chocosolver.util.tools.ArrayUtils;
 
@@ -154,8 +155,10 @@ public class TuplesFactory {
                     return values[0] != values[1];
                 case EQ:
                     return values[0] == values[1];
+                default:
+                    throw new SolverException("Unexpected Tuple operator " + op
+                            + " (should be in {\"=\", \"!=\", \">\",\"<\",\">=\",\"<=\"})");
             }
-            return false;
         }, true, VAR1, VAR2);
     }
 
@@ -376,11 +379,13 @@ public class TuplesFactory {
     /**
      * Generate valid tuples for &#8721;<sub>i in |VARS|</sub>VARS<sub>i</sub>*COEFFS<sub>i</sub> OPERATOR SCALAR + CSTE
      *
+     * with OPERATOR in {"=", "!=", ">","<",">=","<="}
+     *
      * @param VARS concerned variables
      * @return a Tuples object, reserved for a table constraint
      */
     public static Tuples scalar(IntVar[] VARS, final int[] COEFFS, final String OPERATOR, IntVar SCALAR, final int SCALAR_COEFF, int CSTE) {
-        if (OPERATOR.equals("=") && CSTE == 0) {
+        if ("=".equals(OPERATOR) && CSTE == 0) {
             return scalar(VARS, COEFFS, SCALAR, SCALAR_COEFF);
         }
         final Operator op = Operator.get(OPERATOR);
@@ -402,13 +407,17 @@ public class TuplesFactory {
                     return scalar != values[values.length - 1] * SCALAR_COEFF + CSTE;
                 case EQ:
                     return scalar == values[values.length - 1] * SCALAR_COEFF + CSTE;
+                default:
+                    throw new SolverException("Unexpected Tuple operator " + op
+                            + " (should be in {\"=\", \"!=\", \">\",\"<\",\">=\",\"<=\"})");
             }
-            return false;
         }, true, ArrayUtils.append(VARS, new IntVar[]{SCALAR}));
     }
 
     /**
      * Generate valid tuples for &#8721;<sub>i in |VARS|</sub>VARS<sub>i</sub> OPERATOR SUM + CSTE
+     *
+     * with OPERATOR in {"=", "!=", ">","<",">=","<="}
      *
      * @param VARS concerned variables
      * @return a Tuples object, reserved for a table constraint
@@ -433,8 +442,10 @@ public class TuplesFactory {
                     return sum != values[values.length - 1] + CSTE;
                 case EQ:
                     return sum == values[values.length - 1] + CSTE;
+                default:
+                    throw new SolverException("Unexpected Tuple operator " + op
+                            + " (should be in {\"=\", \"!=\", \">\",\"<\",\">=\",\"<=\"})");
             }
-            return false;
         }, true, ArrayUtils.append(VARS, new IntVar[]{SUM}));
     }
 

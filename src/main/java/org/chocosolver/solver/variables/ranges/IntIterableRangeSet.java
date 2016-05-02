@@ -30,6 +30,8 @@
 package org.chocosolver.solver.variables.ranges;
 
 
+import org.chocosolver.solver.exception.SolverException;
+
 import java.util.Arrays;
 
 /**
@@ -48,7 +50,7 @@ public class IntIterableRangeSet implements IntIterableSet {
     /**
      * Store elements
      */
-    protected int[] ELEMENTS;
+    protected  int[] ELEMENTS;
     /**
      * Used size in {@link #ELEMENTS}.
      * To get the nmber of range simply divide by 2.
@@ -161,6 +163,7 @@ public class IntIterableRangeSet implements IntIterableSet {
                     System.arraycopy(ELEMENTS, i + 1, ELEMENTS, i - 1, SIZE - i);
                     SIZE -= 2;
                     break;
+                default: throw new SolverException("Unexpected mask "+c);
             }
             modified = true;
             CARDINALITY++;
@@ -237,6 +240,7 @@ public class IntIterableRangeSet implements IntIterableSet {
                     System.arraycopy(ELEMENTS, i + 2, ELEMENTS, i, SIZE - i - 2);
                     SIZE -= 2;
                     break;
+                default: throw new SolverException("Unexpected mask "+c);
             }
             modified = true;
             CARDINALITY--;
@@ -272,19 +276,12 @@ public class IntIterableRangeSet implements IntIterableSet {
             next = ELEMENTS[0];
         } else if (p >= 0) {
             int i = (p - 1) << 1;
-            int c = ELEMENTS[i] == e ? 1 : 0;
-            c += ELEMENTS[i + 1] == e ? 2 : 0;
-            switch (c) {
-                case 0:
-                case 1:
-                    // not last element of the range
-                    next = e + 1;
-                    break;
-                case 2:
-                case 3:
-                    if (i + 2 < SIZE) {
-                        next = ELEMENTS[i + 2];
-                    }
+            if(ELEMENTS[i+1] != e){
+                next = e + 1; // not last element of the range
+            }else{
+                if (i + 2 < SIZE) {
+                    next = ELEMENTS[i + 2];
+                }
             }
         } else if (p > -((SIZE >> 1) + 1)) {
             return ELEMENTS[(-p - 1) << 1];
@@ -300,19 +297,12 @@ public class IntIterableRangeSet implements IntIterableSet {
             prev = ELEMENTS[SIZE - 1];
         } else if (p >= 0) {
             int i = (p - 1) << 1;
-            int c = ELEMENTS[i] == e ? 1 : 0;
-            c += ELEMENTS[i + 1] == e ? 2 : 0;
-            switch (c) {
-                case 0:
-                case 2:
-                    // not last element of the range
-                    prev = e - 1;
-                    break;
-                case 1:
-                case 3:
-                    if (i > 1) {
-                        prev = ELEMENTS[i - 1];
-                    }
+            if(ELEMENTS[i] == e){
+                if (i > 1) {
+                    prev = ELEMENTS[i - 1];
+                }
+            }else{
+                prev = e - 1;// not last element of the range
             }
         } else if (p < -1) {
             return ELEMENTS[((-p - 1) << 1)-1];
@@ -380,7 +370,7 @@ public class IntIterableRangeSet implements IntIterableSet {
      * @return the range index if the value is in the set or -<i>range point</i> - 1 otherwise
      * where <i>range point</i> corresponds to the range directly greater than the key
      */
-    int rangeOf(int x) {
+    protected int rangeOf(int x) {
         int p = Arrays.binarySearch(ELEMENTS, 0, SIZE, x);
         // if pos is positive, the value is a bound of a range
         if (p >= 0) {
@@ -406,7 +396,7 @@ public class IntIterableRangeSet implements IntIterableSet {
      *
      * @param minCapacity the desired minimum capacity
      */
-    void grow(int minCapacity) {
+    protected void grow(int minCapacity) {
         if (minCapacity - ELEMENTS.length > 0) {
             // overflow-conscious code
             int oldCapacity = ELEMENTS.length;

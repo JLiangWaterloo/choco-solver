@@ -30,7 +30,7 @@
 package org.chocosolver.solver.constraints;
 
 
-import org.chocosolver.memory.structure.Operation;
+import org.chocosolver.memory.structure.IOperation;
 import org.chocosolver.solver.ICause;
 import org.chocosolver.solver.Identity;
 import org.chocosolver.solver.Model;
@@ -127,7 +127,7 @@ public abstract class Propagator<V extends Variable> implements ICause, Identity
     /**
      * Backtrackable operations to maintain the status on backtrack.
      */
-    private Operation[] operations;
+    private IOperation[] operations;
 
     /**
      * Priority of this propagator.
@@ -189,20 +189,20 @@ public abstract class Propagator<V extends Variable> implements ICause, Identity
         }
         this.vindices = new int[vars.length];
         ID = model.nextId();
-        operations = new Operation[]{
-                new Operation() {
+        operations = new IOperation[]{
+                new IOperation() {
                     @Override
                     public void undo() {
                         state = NEW;
                     }
                 },
-                new Operation() {
+                new IOperation() {
                     @Override
                     public void undo() {
                         state = REIFIED;
                     }
                 },
-                new Operation() {
+                new IOperation() {
                     @Override
                     public void undo() {
                         state = ACTIVE;
@@ -523,6 +523,11 @@ public abstract class Propagator<V extends Variable> implements ICause, Identity
         return ID;
     }
 
+    @Override
+    public boolean equals(Object o) {
+        return o instanceof Propagator && ((Propagator) o).ID == ID;
+    }
+
     /**
      * Returns the element at the specified position in this internal list of <code>V</code> objects.
      *
@@ -625,17 +630,9 @@ public abstract class Propagator<V extends Variable> implements ICause, Identity
         StringBuilder st = new StringBuilder();
         st.append(getClass().getSimpleName()).append("(");
         int i = 0;
-        switch (vars.length) {
-            case 0:
-                break;
-            default:
-            case 3:
-                st.append(vars[i++].getName()).append(", ");
-            case 2:
-                st.append(vars[i++].getName()).append(", ");
-            case 1:
-                st.append(vars[i++].getName());
-        }
+        if(vars.length>=3)st.append(vars[i++].getName()).append(", ");
+        if(vars.length>=2)st.append(vars[i++].getName()).append(", ");
+        if(vars.length>=1)st.append(vars[i++].getName());
         if (i < vars.length) {
             if (vars.length > 4) {
                 st.append(", ...");

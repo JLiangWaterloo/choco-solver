@@ -47,7 +47,7 @@ import org.chocosolver.solver.constraints.nary.alldifferent.AllDifferent;
 import org.chocosolver.solver.constraints.nary.alldifferent.conditions.Condition;
 import org.chocosolver.solver.constraints.nary.alldifferent.conditions.PropCondAllDiffInst;
 import org.chocosolver.solver.constraints.nary.alldifferent.conditions.PropCondAllDiff_AC;
-import org.chocosolver.solver.constraints.nary.among.PropAmongGAC_GoodImpl;
+import org.chocosolver.solver.constraints.nary.among.PropAmongGAC;
 import org.chocosolver.solver.constraints.nary.automata.CostRegular;
 import org.chocosolver.solver.constraints.nary.automata.FA.IAutomaton;
 import org.chocosolver.solver.constraints.nary.automata.FA.ICostAutomaton;
@@ -70,7 +70,6 @@ import org.chocosolver.solver.constraints.nary.nValue.PropAMNV;
 import org.chocosolver.solver.constraints.nary.nValue.PropAtLeastNValues;
 import org.chocosolver.solver.constraints.nary.nValue.PropAtLeastNValues_AC;
 import org.chocosolver.solver.constraints.nary.nValue.PropAtMostNValues;
-import org.chocosolver.solver.constraints.nary.nValue.amnv.differences.AutoDiffDetection;
 import org.chocosolver.solver.constraints.nary.nValue.amnv.graph.Gci;
 import org.chocosolver.solver.constraints.nary.nValue.amnv.mis.MDRk;
 import org.chocosolver.solver.constraints.nary.nValue.amnv.rules.R;
@@ -99,7 +98,9 @@ import static org.chocosolver.util.tools.StringUtils.randomName;
  *
  * A kind of factory relying on interface default implementation to allow (multiple) inheritance
  *
- * @author Jean-Guillaume FAGES (www.cosling.com)
+ * @author Jean-Guillaume FAGES
+ * @author Charles Prud'homme
+ * @since 4.0.0
  */
 public interface IIntConstraintFactory {
 
@@ -217,16 +218,16 @@ public interface IIntConstraintFactory {
 	 */
 	default Constraint arithm(IntVar var1, String op1, IntVar var2, String op2, int cste) {
 		if (var2.isInstantiated()) {
-			if (op1.equals("+")) {
+			if ("+".equals(op1)) {
 				return arithm(var1, op2, cste - var2.getValue());
-			} else if (op1.equals("-")) {
+			} else if ("-".equals(op1)) {
 				return arithm(var1, op2, cste + var2.getValue());
 			}
 		}
 		if (var1.isInstantiated()) {
-			if (op1.equals("+")) {
+			if ("+".equals(op1)) {
 				return arithm(var2, op2, cste - var1.getValue());
-			} else if (op1.equals("-")) {
+			} else if ("-".equals(op1)) {
 				return arithm(var2, Operator.getFlip(op2), var1.getValue() - cste);
 			}
 		}
@@ -240,7 +241,11 @@ public interface IIntConstraintFactory {
 	 */
 	default Constraint distance(IntVar var1, IntVar var2, String op, int cste) {
 		assert var1.getModel() == var2.getModel();
-		return new DistanceXYC(var1, var2, Operator.get(op), cste);
+		Operator operator = Operator.get(op);
+		if (operator != Operator.EQ && operator != Operator.GT && operator != Operator.LT && operator != Operator.NQ) {
+			throw new SolverException("Unexpected operator for distance");
+		}
+		return new Constraint("DistanceXYC " + operator.name(), new PropDistanceXYC(ArrayUtils.toArray(var1, var2), operator, cste));
 	}
 
 	/**
@@ -372,10 +377,10 @@ public interface IIntConstraintFactory {
 						return scalar(new IntVar[]{var1, var3}, new int[]{1, -1}, op1, var2);
 					case "-":
 						return scalar(new IntVar[]{var1, var3}, new int[]{1, 1}, op1, var2);
+					default:
+						throw new SolverException("Unknown operators for arithm constraint");
 				}
-				break;
 		}
-		throw new SolverException("Unknown operators for arithm constraint");
 	}
 
 	/**
@@ -389,7 +394,11 @@ public interface IIntConstraintFactory {
 	 * @param var3 resulting variable
 	 */
 	default Constraint distance(IntVar var1, IntVar var2, String op, IntVar var3) {
-		return new DistanceXYZ(var1, var2, Operator.get(op), var3);
+		Operator oper = Operator.get(op);
+		if (oper != Operator.EQ && oper != Operator.GT && oper != Operator.LT) {
+			throw new SolverException("Unexpected operator for distance");
+		}
+		return new Constraint("DistanceXYZ " + op, new PropDistanceXYZ(ArrayUtils.toArray(var1,var2,var3), oper));
 	}
 
 	/**
@@ -515,30 +524,25 @@ public interface IIntConstraintFactory {
 	}
 
 	/**
-	 * Creates an allDifferent constraint holding on the subset of vars that satisfies the given condition
+	 * Creates an allDifferent constraint subject to the given condition. More precisely:
+	 *
+	 * IF <code>singleCondition</code>
+	 * 	for all X,Y in vars, condition(X) => X != Y
+	 * ELSE
+	 * 	for all X,Y in vars, condition(X) AND condition(Y) => X != Y
 	 *
 	 * @param vars      collection of variables
 	 * @param condition condition defining which variables should be constrained
-	 * @param ac        specifies is AC filtering should be established
+	 * @param singleCondition specifies how to apply filtering
 	 */
-	default Constraint allDifferentUnderCondition(IntVar[] vars, Condition condition, boolean ac) {
-		if (ac) {
+	default Constraint allDifferentUnderCondition(IntVar[] vars, Condition condition, boolean singleCondition) {
+		if (singleCondition) {
 			return new Constraint("AllDifferent" + condition,
-					new PropCondAllDiffInst(vars, condition),
+					new PropCondAllDiffInst(vars, condition, singleCondition),
 					new PropCondAllDiff_AC(vars, condition)
 			);
 		}
-		return new Constraint("AllDifferent" + condition, new PropCondAllDiffInst(vars, condition));
-	}
-
-	/**
-	 * Creates an allDifferent constraint holding on the subset of vars that satisfies the given condition
-	 *
-	 * @param vars      collection of variables
-	 * @param condition condition defining which variables should be constrained
-	 */
-	default Constraint allDifferentUnderCondition(IntVar[] vars, Condition condition) {
-		return allDifferentUnderCondition(vars, condition, false);
+		return new Constraint("AllDifferent" + condition, new PropCondAllDiffInst(vars, condition, singleCondition));
 	}
 
 	/**
@@ -548,7 +552,7 @@ public interface IIntConstraintFactory {
 	 * @param vars collection of variables
 	 */
 	default Constraint allDifferentExcept0(IntVar[] vars) {
-		return allDifferentUnderCondition(vars, Condition.EXCEPT_0);
+		return allDifferentUnderCondition(vars, Condition.EXCEPT_0, true);
 	}
 
 	/**
@@ -568,7 +572,7 @@ public interface IIntConstraintFactory {
 	default Constraint among(IntVar nbVar, IntVar[] vars, int[] values) {
 		int[] vls = new TIntHashSet(values).toArray(); // remove double occurrences
 		Arrays.sort(vls);                              // sort
-		return new Constraint("Among", new PropAmongGAC_GoodImpl(ArrayUtils.append(vars, new IntVar[]{nbVar}), vls));
+		return new Constraint("Among", new PropAmongGAC(ArrayUtils.append(vars, new IntVar[]{nbVar}), vls));
 	}
 
 	/**
@@ -633,10 +637,10 @@ public interface IIntConstraintFactory {
 	 *                automatically detects disequalities and allDifferent constraints.
 	 *                Presumably useful when nValues must be minimized.
 	 */
-	default Constraint atMostNVvalues(IntVar[] vars, IntVar nValues, boolean STRONG) {
+	default Constraint atMostNValues(IntVar[] vars, IntVar nValues, boolean STRONG) {
 		TIntArrayList vals = getDomainUnion(vars);
 		if (STRONG) {
-			Gci gci = new Gci(vars, new AutoDiffDetection(vars));
+			Gci gci = new Gci(vars);
 			R[] rules = new R[]{new R1(), new R3(vars.length, nValues.getModel())};
 			return new Constraint("AtMostNValues", new PropAtMostNValues(vars, vals, nValues),
 					new PropAMNV(vars, nValues, gci, new MDRk(gci), rules));
@@ -863,19 +867,25 @@ public interface IIntConstraintFactory {
 	 * the cumulated height of the set of tasks that overlap that point
 	 * does not exceed a given limit.
 	 *
+	 * Task duration and height should be >= 0
+	 * Discards tasks whose duration or height is equal to zero
+	 *
 	 * @param tasks    Task objects containing start, duration and end variables
 	 * @param heights  integer variables representing the resource consumption of each task
 	 * @param capacity integer variable representing the resource capacity
 	 * @return a cumulative constraint
 	 */
 	default Constraint cumulative(Task[] tasks, IntVar[] heights, IntVar capacity) {
-		return cumulative(tasks, heights, capacity, tasks.length > 500); // TODO improve criterion
+		return cumulative(tasks, heights, capacity, true);
 	}
 
 	/**
 	 * Creates a cumulative constraint: Enforces that at each point in time,
 	 * the cumulated height of the set of tasks that overlap that point
 	 * does not exceed a given limit.
+	 *
+	 * Task duration and height should be >= 0
+	 * Discards tasks whose duration or height is equal to zero
 	 *
 	 * @param tasks       Task objects containing start, duration and end variables
 	 * @param heights     integer variables representing the resource consumption of each task
@@ -884,25 +894,39 @@ public interface IIntConstraintFactory {
 	 * @return a cumulative constraint
 	 */
 	default Constraint cumulative(Task[] tasks, IntVar[] heights, IntVar capacity, boolean incremental) {
-		// Cumulative.Filter.heights is useless if all heights are already instantiated
-		boolean addHeights = false;
+		return cumulative(tasks,heights,capacity,incremental, Cumulative.Filter.DEFAULT);
+	}
+
+	/**
+	 * Creates a cumulative constraint: Enforces that at each point in time,
+	 * the cumulated height of the set of tasks that overlap that point
+	 * does not exceed a given limit.
+	 *
+	 * Task duration and height should be >= 0
+	 * Discards tasks whose duration or height is equal to zero
+	 *
+	 * @param tasks       Task objects containing start, duration and end variables
+	 * @param heights     integer variables representing the resource consumption of each task
+	 * @param capacity    integer variable representing the resource capacity
+	 * @param incremental specifies if an incremental propagation should be applied
+	 * @param filters	  specifies which filtering algorithms to apply
+	 * @return a cumulative constraint
+	 */
+	default Constraint cumulative(Task[] tasks, IntVar[] heights, IntVar capacity, boolean incremental, Cumulative.Filter... filters) {
 		int nbUseFull = 0;
 		for (int h = 0; h < heights.length; h++) {
-			if (!heights[h].isInstantiated()) {
-				addHeights = true;
-			}
-			if (!(heights[h].isInstantiatedTo(0) || tasks[h].getDuration().isInstantiatedTo(0))) {
+			if (heights[h].getUB()>0 && tasks[h].getDuration().getUB()>0) {
 				nbUseFull++;
 			}
 		}
-		// remove tasks which have no impact on resource
+		// remove tasks that have no impact on resource consumption
 		if (nbUseFull < tasks.length) {
 			if (nbUseFull == 0) return arithm(capacity, ">=", 0);
 			Task[] T2 = new Task[nbUseFull];
 			IntVar[] H2 = new IntVar[nbUseFull];
 			int idx = 0;
 			for (int h = 0; h < heights.length; h++) {
-				if (!(heights[h].isInstantiatedTo(0) || tasks[h].getDuration().isInstantiatedTo(0))) {
+				if (heights[h].getUB()>0 && tasks[h].getDuration().getUB()>0) {
 					T2[idx] = tasks[h];
 					H2[idx] = heights[h];
 					idx++;
@@ -910,13 +934,6 @@ public interface IIntConstraintFactory {
 			}
 			tasks = T2;
 			heights = H2;
-		}
-		Cumulative.Filter[] filters = new Cumulative.Filter[]{Cumulative.Filter.TIME, Cumulative.Filter.NRJ};
-		if (addHeights) {
-			filters = ArrayUtils.append(filters, new Cumulative.Filter[]{Cumulative.Filter.HEIGHTS});
-		}
-		if(capacity.isInstantiatedTo(1)){
-			filters = ArrayUtils.append(filters, new Cumulative.Filter[]{Cumulative.Filter.DISJUNCTIVE_TASK_INTERVAL});
 		}
 		return new Cumulative(tasks, heights, capacity, incremental, filters);
 	}
@@ -967,9 +984,9 @@ public interface IIntConstraintFactory {
 			return Constraint.merge("DiffNWithCumulative",
 					diffNCons,
 					min(minX, X), max(maxX, EX), scalar(new IntVar[]{maxX, minX}, new int[]{1, -1}, "=", diffX),
-					cumulative(TX, height, diffY, true),
+					cumulative(TX, height, diffY),
 					min(minY, Y), max(maxY, EY), scalar(new IntVar[]{maxY, minY}, new int[]{1, -1}, "=", diffY),
-					cumulative(TY, width, diffX, true)
+					cumulative(TY, width, diffX)
 			);
 		}else{
 			return diffNCons;
@@ -1150,11 +1167,11 @@ public interface IIntConstraintFactory {
 	 *     model.post(solver.arithm(weightSum, "<=", limit);
 	 * </pre>
 	 *
-	 * @param occurrences  number of occurrences of an item
-	 * @param weightSum capacity of the knapsack
-	 * @param energySum variable to maximize
-	 * @param weight       weight of each item
-	 * @param energy       energy of each item
+	 * @param occurrences  number of occurrences of every item
+	 * @param weightSum load of the knapsack
+	 * @param energySum profit of the knapsack
+	 * @param weight       weight of each item (must be >=0)
+	 * @param energy       energy of each item (must be >=0)
 	 */
 	default Constraint knapsack(IntVar[] occurrences, IntVar weightSum, IntVar energySum,
 								int[] weight, int[] energy) {
@@ -1244,10 +1261,14 @@ public interface IIntConstraintFactory {
 	 * max is the maximum value of the collection of domain variables vars
 	 *
 	 * @param max  a variable
-	 * @param vars a vector of variables
+	 * @param vars a vector of variables, of size > 0
 	 */
 	default Constraint max(IntVar max, IntVar[] vars) {
-		return new Constraint("Max", new PropMax(vars, max));
+        if(vars.length == 2){
+            return max(max, vars[0], vars[1]);
+        }else {
+            return new Constraint("Max", new PropMax(vars, max));
+        }
 	}
 
 	/**
@@ -1255,7 +1276,7 @@ public interface IIntConstraintFactory {
 	 * max is the maximum value of the collection of boolean variables vars
 	 *
 	 * @param max  a boolean variable
-	 * @param vars a vector of boolean variables
+	 * @param vars a vector of boolean variables, of size > 0
 	 */
 	default Constraint max(BoolVar max, BoolVar[] vars) {
 		return new Constraint("MinOverBools", new PropBoolMax(vars, max));
@@ -1277,10 +1298,14 @@ public interface IIntConstraintFactory {
 	 * min is the minimum value of the collection of domain variables vars
 	 *
 	 * @param min  a variable
-	 * @param vars a vector of variables
+	 * @param vars a vector of variables, of size > 0
 	 */
 	default Constraint min(IntVar min, IntVar[] vars) {
-		return new Constraint("Min", new PropMin(vars, min));
+		if(vars.length == 2) {
+            return min(min, vars[0], vars[1]);
+        }else{
+            return new Constraint("Min", new PropMin(vars, min));
+        }
 	}
 
 	/**
@@ -1288,7 +1313,7 @@ public interface IIntConstraintFactory {
 	 * min is the minimum value of the collection of boolean variables vars
 	 *
 	 * @param min  a boolean variable
-	 * @param vars a vector of boolean variables
+	 * @param vars a vector of boolean variables, of size > 0
 	 */
 	default Constraint min(BoolVar min, BoolVar[] vars) {
 		return new Constraint("MinOverBools", new PropBoolMin(vars, min));
@@ -1325,7 +1350,7 @@ public interface IIntConstraintFactory {
 	 * @return the conjunction of atleast_nvalue and atmost_nvalue
 	 */
 	default Constraint nValues(IntVar[] vars, IntVar nValues) {
-		return Constraint.merge("nValue",atLeastNValues(vars, nValues, false), atMostNVvalues(vars, nValues, true));
+		return Constraint.merge("nValue",atLeastNValues(vars, nValues, false), atMostNValues(vars, nValues, true));
 	}
 
 	/**
@@ -1605,7 +1630,7 @@ public interface IIntConstraintFactory {
 	 * @param sum  a variable
 	 */
 	default Constraint sum(BoolVar[] vars, String operator, IntVar sum) {
-		if (operator.equals("=")) {
+		if ("=".equals(operator)) {
 			return IntLinCombFactory.reduce(vars, Operator.EQ, sum);
 		}
 		int lb = 0;
@@ -1629,12 +1654,14 @@ public interface IIntConstraintFactory {
 	 * @param tuples    the relation between the variables (list of allowed/forbidden tuples)
 	 */
 	default Constraint table(IntVar[] vars, Tuples tuples) {
-		return table(vars,tuples,tuples.isFeasible()?"GACSTR+":"GAC3rm");
+		return table(vars,tuples,tuples.isFeasible()?"CT+":"GAC3rm");
 	}
 
 	/**
 	 * Creates a table constraint, with the specified algorithm defined algo
 	 * <p>
+	 * - <b>CT+</b>: Compact-Table algorithm (AC),
+	 * <br/>
 	 * - <b>GAC2001</b>: Arc Consistency version 2001 for tuples,
 	 * <br/>
 	 * - <b>GAC2001+</b>: Arc Consistency version 2001 for allowed tuples,
@@ -1653,7 +1680,7 @@ public interface IIntConstraintFactory {
 	 *
 	 * @param vars      variables forming the tuples
 	 * @param tuples    the relation between the variables (list of allowed/forbidden tuples)
-	 * @param algo to choose among {"GAC3rm", "GAC2001", "GACSTR", "GAC2001+", "GAC3rm+", "FC", "STR2+"}
+	 * @param algo to choose among {"TC+", "GAC3rm", "GAC2001", "GACSTR", "GAC2001+", "GAC3rm+", "FC", "STR2+"}
 	 */
 	default Constraint table(IntVar[] vars, Tuples tuples, String algo) {
 		if (vars.length == 2) {
@@ -1664,6 +1691,8 @@ public interface IIntConstraintFactory {
 		}
 		Propagator p;
 		switch (algo) {
+			case "CT+": p = new PropCompactTable(vars, tuples);
+				break;
 			case "MDD+": p = new PropLargeMDDC(new MultivaluedDecisionDiagram(vars, tuples), vars);
 				break;
 			case "FC": p = new PropLargeFC(vars, tuples);

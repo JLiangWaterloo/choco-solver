@@ -32,6 +32,7 @@ package org.chocosolver.solver.constraints.ternary;
 import org.chocosolver.solver.constraints.Propagator;
 import org.chocosolver.solver.constraints.PropagatorPriority;
 import org.chocosolver.solver.exception.ContradictionException;
+import org.chocosolver.solver.exception.SolverException;
 import org.chocosolver.solver.variables.IntVar;
 import org.chocosolver.util.ESat;
 
@@ -43,10 +44,10 @@ import org.chocosolver.util.ESat;
 public class PropDivXYZ extends Propagator<IntVar> {
 
     // Z = X/Y
-    final IntVar X, Y, Z;
+    private final IntVar X, Y, Z;
 
     // Abs views of respectively X, Y and Z
-    final IntVar absX, absY, absZ;
+    private final IntVar absX, absY, absZ;
 
 
     public PropDivXYZ(IntVar x, IntVar y, IntVar z) {
@@ -151,6 +152,7 @@ public class PropDivXYZ extends Propagator<IntVar> {
                         return;
                     }
                     break;
+                default: throw new SolverException("Unexpected mask "+mask);
             }
             //------ update sign ---------
             // at this step, Y != 0 => sY != 0

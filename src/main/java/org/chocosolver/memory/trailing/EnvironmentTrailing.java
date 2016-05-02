@@ -31,7 +31,7 @@ package org.chocosolver.memory.trailing;
 
 
 import org.chocosolver.memory.*;
-import org.chocosolver.memory.structure.Operation;
+import org.chocosolver.memory.structure.IOperation;
 import org.chocosolver.memory.trailing.trail.*;
 import org.chocosolver.memory.trailing.trail.flatten.*;
 import org.chocosolver.memory.trailing.trail.unsafe.UnsafeBoolTrail;
@@ -221,6 +221,7 @@ public final class EnvironmentTrailing extends AbstractEnvironment {
     public IStoredIntTrail getIntTrail() {
         if (intTrail == null) {
             switch (type) {
+                default:
                 case FLAT:
                     intTrail = new StoredIntTrail(MaxHist, maxWorld);
                     break;
@@ -237,6 +238,7 @@ public final class EnvironmentTrailing extends AbstractEnvironment {
     public IStoredLongTrail getLongTrail() {
         if (longTrail == null) {
             switch (type) {
+                default:
                 case FLAT:
                     longTrail = new StoredLongTrail(MaxHist, maxWorld);
                     break;
@@ -254,6 +256,7 @@ public final class EnvironmentTrailing extends AbstractEnvironment {
     public IStoredBoolTrail getBoolTrail() {
         if (boolTrail == null) {
             switch (type) {
+                default:
                 case FLAT:
                     boolTrail = new StoredBoolTrail(MaxHist, maxWorld);
                     break;
@@ -271,6 +274,7 @@ public final class EnvironmentTrailing extends AbstractEnvironment {
     public IStoredDoubleTrail getDoubleTrail() {
         if (doubleTrail == null) {
             switch (type) {
+                default:
                 case FLAT:
                     doubleTrail = new StoredDoubleTrail(MaxHist, maxWorld);
                     break;
@@ -286,12 +290,7 @@ public final class EnvironmentTrailing extends AbstractEnvironment {
 
     public IOperationTrail getOperationTrail() {
         if (operationTrail == null) {
-            switch (type) {
-                case UNSAFE:
-                case FLAT:
-                    operationTrail = new OperationTrail(MaxHist, maxWorld);
-                    break;
-            }
+            operationTrail = new OperationTrail(MaxHist, maxWorld);
             increaseTrail();
             trails[trailSize++] = operationTrail;
         }
@@ -331,7 +330,7 @@ public final class EnvironmentTrailing extends AbstractEnvironment {
     }
 
 
-    public void save(Operation oldValue) {
+    public void save(IOperation oldValue) {
         getOperationTrail().savePreviousState(oldValue);
     }
 }

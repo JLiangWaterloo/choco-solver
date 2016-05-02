@@ -33,13 +33,13 @@ And run license check:
 
 5. Make sure the website is mounted to /Volume/htdocs/ and run the command :
 
-    $ ./src/scripts/release.sh
+    $ ./bin/release.sh
 
-    $ ./src/scripts/build.sh
+    $ ./bin/deploy.sh
 
     However, deployment and zip file (jar files, user guide and javadoc) need to be done locally:
 
-    ./src/scripts/package.sh X.Y.Z
+    ./bin/package.sh X.Y.Z
 
 6. Upload the zip file onto the website
 

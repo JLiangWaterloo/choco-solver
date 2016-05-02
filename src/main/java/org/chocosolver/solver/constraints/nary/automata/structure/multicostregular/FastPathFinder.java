@@ -49,30 +49,30 @@ import java.util.Arrays;
  */
 public class FastPathFinder {
 
-    StoredDirectedMultiGraph graph;
+    //***********************************************************************************
+   	// VARIABLES
+   	//***********************************************************************************
 
-    int[] sp;
-    int[] lp;
-
-    int nbLayer;
-    int nbR;
-
+    private StoredDirectedMultiGraph graph;
+    private int[] sp;
+    private int nbLayer;
+    private int nbR;
     public double[][] spfs;// = new double[graph.GNodes.spfs.length][graph.nbR+1];
     public double[][] spft;// = new double[graph.GNodes.spfs.length][graph.nbR+1];
-    double[][] lpfs;// = new double[graph.GNodes.spfs.length][graph.nbR+1];
-    double[][] lpft;// = new double[graph.GNodes.spfs.length][graph.nbR+1];
-    boolean[] modified = new boolean[2];
+    private double[][] lpfs;// = new double[graph.GNodes.spfs.length][graph.nbR+1];
+    private double[][] lpft;// = new double[graph.GNodes.spfs.length][graph.nbR+1];
+    private boolean[] modified = new boolean[2];
+    // prevSP is a shortcut to graph.GNodes.prevSPI
+    private int[][] prevSP,nextSP,prevLP,nextLP;
+    private double[] tmpU;
 
-    int[][] prevSP;
-    int[][] nextSP;
-    int[][] prevLP;
-    int[][] nextLP;
-
+    //***********************************************************************************
+   	// CONSTRUCTOR
+   	//***********************************************************************************
 
     public FastPathFinder(StoredDirectedMultiGraph graph) {
         this.graph = graph;
         this.sp = new int[graph.layers.length - 1];
-        this.lp = new int[graph.layers.length - 1];
         this.nbLayer = graph.layers.length - 1;
         this.nbR = this.graph.nbR - 1;
         this.tmpU = new double[nbR];
@@ -84,9 +84,11 @@ public class FastPathFinder {
         nextSP = this.graph.GNodes.nextSPI;
         prevLP = this.graph.GNodes.prevLPI;
         nextLP = this.graph.GNodes.nextLPI;
-
-
     }
+
+    //***********************************************************************************
+   	// METHODS
+   	//***********************************************************************************
 
     private double getCost(int e, int resource, double[] u, boolean lagrange, boolean max) {
         double cost;
@@ -104,8 +106,6 @@ public class FastPathFinder {
         return cost;
     }
 
-    private double[] tmpU;
-
     private double[] simplifyLagrangian(double[] u) {
         for (int k = 1; k <= nbR; k++)
             tmpU[k - 1] = u[k - 1] - u[k - 1 + nbR];
@@ -119,7 +119,6 @@ public class FastPathFinder {
         }
         return true;
     }
-
 
     public void computeLongestPath(TIntStack removed, double lb, double[] u, boolean lagrange, boolean max,
                                    int resource, PropMultiCostRegular propagator) throws ContradictionException {
@@ -233,7 +232,6 @@ public class FastPathFinder {
         return sp;
     }
 
-
     public void computeShortestPath(TIntStack removed, double ub, double[] u, boolean lagrange, boolean max,
                                     int resource, PropMultiCostRegular propagator) throws ContradictionException {
 
@@ -341,7 +339,6 @@ public class FastPathFinder {
         } while (graph.GNodes.nextSP[current] != Integer.MIN_VALUE);
         return sp;
     }
-
 
     public void computeShortestAndLongestPath(IStateIntVector removed, int lb, int ub, double[] u, boolean lagrange,
                                               boolean max, int resource, PropMultiCostRegular propagator)
@@ -548,13 +545,11 @@ public class FastPathFinder {
                                 nextLP[orig][d] = e;
                                 update = true;
                             }
-
                         }
 
                     }
                 }
                 //  out.dispose();
-
             }
             //  origIter.dispose();
             if (!update) propagator.fails();
@@ -570,13 +565,5 @@ public class FastPathFinder {
         }
 
         return modified;
-    }
-
-    private static double[] addArray(double[] spf, double[] cost) {
-        double[] out = new double[spf.length];
-        for (int i = 0; i < out.length; i++) {
-            out[i] = spf[i] + cost[i];
-        }
-        return out;
     }
 }

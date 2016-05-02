@@ -51,13 +51,13 @@ import org.chocosolver.util.procedure.UnaryIntProcedure;
  */
 public class PropDistanceXYC extends Propagator<IntVar> {
 
-    protected final Operator operator;
+    private final Operator operator;
 
-    protected final int cste;
+    private final int cste;
 
-    protected final RemProc remproc;
+    private final RemProc remproc;
 
-    protected final IIntDeltaMonitor[] idms;
+    private final IIntDeltaMonitor[] idms;
 
     public PropDistanceXYC(IntVar[] vars, Operator operator, int cste) {
         super(vars, PropagatorPriority.BINARY, true);
@@ -96,6 +96,7 @@ public class PropDistanceXYC extends Propagator<IntVar> {
                 case GT:
                     this.setPassive();
                     break;
+                default: throw new SolverException("Invalid PropDistanceXYC operator "+operator);
             }
         }
         if (operator == Operator.EQ) {
@@ -159,22 +160,23 @@ public class PropDistanceXYC extends Propagator<IntVar> {
                     filterLTonVar(vars[varIdx], vars[idx2]);
                 }
                 break;
+            default: throw new SolverException("Invalid PropDistanceXYC operator "+operator);
         }
     }
 
     @Override
     public ESat isEntailed() {
         if (isCompletelyInstantiated()) {
-            if (operator == Operator.EQ) {
-                return ESat.eval(Math.abs(vars[0].getValue() - vars[1].getValue()) == cste);
-            } else if (operator == Operator.LT) {
-                return ESat.eval(Math.abs(vars[0].getValue() - vars[1].getValue()) < cste);
-            } else if (operator == Operator.GT) {
-                return ESat.eval(Math.abs(vars[0].getValue() - vars[1].getValue()) > cste);
-            } else if (operator == Operator.NQ) {
-                return ESat.eval(Math.abs(vars[0].getValue() - vars[1].getValue()) != cste);
-            } else {
-                throw new SolverException("operator not known");
+            switch (operator) {
+                case EQ:
+                    return ESat.eval(Math.abs(vars[0].getValue() - vars[1].getValue()) == cste);
+                case GT:
+                    return ESat.eval(Math.abs(vars[0].getValue() - vars[1].getValue()) > cste);
+                case LT:
+                    return ESat.eval(Math.abs(vars[0].getValue() - vars[1].getValue()) < cste);
+                case NQ:
+                    return ESat.eval(Math.abs(vars[0].getValue() - vars[1].getValue()) != cste);
+                default: throw new SolverException("Invalid PropDistanceXYC operator "+operator);
             }
         }
         return ESat.UNDEFINED;
@@ -197,6 +199,7 @@ public class PropDistanceXYC extends Propagator<IntVar> {
             case NQ:
                 st.append("=/=");
                 break;
+            default: throw new SolverException("Invalid PropDistanceXYC operator "+operator);
         }
         st.append(cste);
         return st.toString();
@@ -370,8 +373,8 @@ public class PropDistanceXYC extends Propagator<IntVar> {
 
     private static class RemProc implements UnaryIntProcedure<Integer> {
 
-        int idx;
-        final PropDistanceXYC p;
+        private int idx;
+        private final PropDistanceXYC p;
 
         public RemProc(PropDistanceXYC p) {
             this.p = p;

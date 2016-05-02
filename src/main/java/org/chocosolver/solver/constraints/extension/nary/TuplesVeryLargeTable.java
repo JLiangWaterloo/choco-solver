@@ -46,32 +46,15 @@ public class TuplesVeryLargeTable extends LargeRelation {
     /**
      * the number of dimensions of the considered tuples
      */
-    protected final int n;
+    private final int n;
 
-    /**
-     * lower bound of each variable
-     */
-    protected final int[] lowerbounds;
+    private final boolean feasible;
 
-    /**
-     * upper bound of each variable
-     */
-    protected final int[] upperbounds;
-
-    protected final boolean feasible;
-
-    protected final TIntObjectHashMap<TIntObjectHashMap> supports;
+    private final TIntObjectHashMap<TIntObjectHashMap> supports;
 
     public TuplesVeryLargeTable(Tuples tuples, IntVar[] vars) {
         n = vars.length;
-        lowerbounds = new int[n];
-        upperbounds = new int[n];
         feasible = tuples.isFeasible();
-
-        for (int i = 0; i < n; i++) {
-            lowerbounds[i] = vars[i].getLB();
-            upperbounds[i] = vars[i].getUB();
-        }
         supports = new TIntObjectHashMap<>();
         int nt = tuples.nbTuples();
         for (int i = 0; i < nt; i++) {
@@ -80,15 +63,6 @@ public class TuplesVeryLargeTable extends LargeRelation {
                 setTuple(tuple);
             }
         }
-    }
-
-
-    public TuplesVeryLargeTable(int n, int[] lowerbounds, int[] upperbounds, boolean feasible, TIntObjectHashMap<TIntObjectHashMap> supports) {
-        this.n = n;
-        this.lowerbounds = lowerbounds;
-        this.upperbounds = upperbounds;
-        this.feasible = feasible;
-        this.supports = supports;
     }
 
     public boolean checkTuple(int[] tuple) {
@@ -109,7 +83,7 @@ public class TuplesVeryLargeTable extends LargeRelation {
     }
 
     @SuppressWarnings("unchecked")
-    void setTuple(int[] tuple) {
+    private void setTuple(int[] tuple) {
         TIntObjectHashMap<TIntObjectHashMap> current = supports;
         for (int i = 0; i < tuple.length; i++) {
             TIntObjectHashMap<TIntObjectHashMap> _current = current.get(tuple[i]);
@@ -118,15 +92,6 @@ public class TuplesVeryLargeTable extends LargeRelation {
                 current.put(tuple[i], _current);
             }
             current = _current;
-        }
-    }
-
-
-    private void deepCopy(TIntObjectHashMap<TIntObjectHashMap> from, TIntObjectHashMap<TIntObjectHashMap> to) {
-        for (int k : from.keys()) {
-            TIntObjectHashMap<TIntObjectHashMap> _to = new TIntObjectHashMap<>();
-            to.put(k, _to);
-            deepCopy(from.get(k), _to);
         }
     }
 }

@@ -46,15 +46,12 @@ class CouplesBitSetTable extends BinRelation {
      * table[0][i] gives the supports of value i of variable 0
      * table[1][i] gives the supports of value i of variable 1
      */
-    protected final BitSet[][] table;
+    private final BitSet[][] table;
 
     /**
      * first value of x, and y
      */
-    protected final int[] offsets;
-
-
-    protected final boolean feasible;
+    private final int[] offsets;
 
     /**
      * Create a tuple list for AC3bit+rm
@@ -67,7 +64,7 @@ class CouplesBitSetTable extends BinRelation {
         int range2 = var2.getUB() - offsets[1] + 1;
         this.table = new BitSet[2][];
         this.table[0] = new BitSet[range1];
-        this.feasible = tuples.isFeasible();
+        boolean feasible = tuples.isFeasible();
         for (int i = 0; i < range1; i++) {
             table[0][i] = new BitSet(range2);
             if (!feasible) table[0][i].set(0, range2);

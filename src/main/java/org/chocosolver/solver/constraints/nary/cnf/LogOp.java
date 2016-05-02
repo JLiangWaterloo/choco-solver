@@ -65,13 +65,13 @@ public final class LogOp implements ILogical {
         }
     }
 
-    Type type;
+    protected Type type;
 
-    Operator operator;
+    protected Operator operator;
 
-    ILogical[] children;
+    protected ILogical[] children;
 
-    BoolVar[] varsAsArray;
+    protected BoolVar[] varsAsArray;
 
     protected LogOp(Operator operator, Type type, ILogical... children) {
         this.type = type;
@@ -259,7 +259,7 @@ public final class LogOp implements ILogical {
      *
      * @return number of children
      */
-    int getNbChildren() {
+    protected int getNbChildren() {
         return children.length;
     }
 
@@ -268,7 +268,7 @@ public final class LogOp implements ILogical {
      *
      * @return <code>true</code> if <code>this</code> contains one OR logic tree
      */
-    boolean hasOrChild() {
+    protected boolean hasOrChild() {
         for (int i = 0; i < children.length; i++) {
             if (!children[i].isLit() && ((LogOp) children[i]).is(Operator.OR)) {
                 return true;
@@ -282,7 +282,7 @@ public final class LogOp implements ILogical {
      *
      * @return <code>true</code> if <code>this</code> contains one AND logic tree
      */
-    boolean hasAndChild() {
+    protected boolean hasAndChild() {
         for (int i = 0; i < children.length; i++) {
             if (!children[i].isLit() && ((LogOp) children[i]).is(Operator.AND)) {
                 return true;

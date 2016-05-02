@@ -50,31 +50,23 @@ public class PropXplusYeqZ extends Propagator<IntVar>{
     /**
      * Position of X in {@link #vars}
      */
-    int x = 0;
+    private int x = 0;
     /**
      * Position of Y in {@link #vars}
      */
-    int y = 1;
+    private int y = 1;
     /**
      * Position of Z in {@link #vars}
      */
-    int z = 2;
+    private int z = 2;
     /**
      * Set to <tt>true</tt> if X, Y and Z are bounded
      */
-    boolean allbounded = false;
+    private boolean allbounded = false;
     /**
      * Temporary structure to ease filtering
      */
-    IntIterableRangeSet r1;
-    /**
-     * Temporary structure to ease filtering
-     */
-    IntIterableRangeSet r2;
-    /**
-     * Temporary structure to ease filtering
-     */
-    IntIterableRangeSet r3;
+    private IntIterableRangeSet r1, r2, r3;
 
     /**
      * Create propagator for ternary sum: X + Y =Z
@@ -110,7 +102,7 @@ public class PropXplusYeqZ extends Propagator<IntVar>{
      * @return <tt>true</tt> if vars[vr] has changed
      * @throws ContradictionException if failure occurs
      */
-    boolean filterPlus(int vr, int v1, int v2) throws ContradictionException {
+    private boolean filterPlus(int vr, int v1, int v2) throws ContradictionException {
         int lb = vars[v1].getLB() + vars[v2].getLB();
         int ub = vars[v1].getUB() + vars[v2].getUB();
         boolean change = vars[vr].updateBounds(lb, ub, this);
@@ -131,7 +123,7 @@ public class PropXplusYeqZ extends Propagator<IntVar>{
      * @return <tt>true</tt> if vars[vr] has changed
      * @throws ContradictionException if failure occurs
      */
-    boolean filterMinus(int vr, int v1, int v2) throws ContradictionException {
+    private boolean filterMinus(int vr, int v1, int v2) throws ContradictionException {
         int lb = vars[v1].getLB() - vars[v2].getUB();
         int ub = vars[v1].getUB() - vars[v2].getLB();
         boolean change = vars[vr].updateBounds(lb, ub, this);

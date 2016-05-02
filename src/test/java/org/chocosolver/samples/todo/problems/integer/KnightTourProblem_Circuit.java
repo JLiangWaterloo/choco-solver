@@ -36,9 +36,9 @@ import org.chocosolver.solver.Solver;
 import org.chocosolver.solver.variables.IntVar;
 import org.kohsuke.args4j.Option;
 
+import static org.chocosolver.samples.todo.input.HCP_Utils.generateKingTourInstance;
 import static org.chocosolver.solver.search.strategy.SearchStrategyFactory.intVarSearch;
 import static org.chocosolver.solver.search.strategy.selectors.VarSelectorFactory.minDomIntVar;
-import static org.chocosolver.samples.todo.input.HCP_Utils.generateKingTourInstance;
 
 /**
  * Solves the Knight's Tour Problem
@@ -89,7 +89,7 @@ public class KnightTourProblem_Circuit extends AbstractProblem {
         Solver r = model.getSolver();
 		r.limitTime(limit);
 		r.set(intVarSearch(
-				minDomIntVar(),
+				minDomIntVar(r.getModel()),
                 var -> {
                     int ub = var.getUB();
                     int size = succ.length + 1;

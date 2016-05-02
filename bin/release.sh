@@ -10,7 +10,7 @@ git branch -d release 2> /dev/null
 git checkout -b release || exit 1
 
 #Establish the version, maven side, misc. side
-./src/scripts/set_version.sh ${VERSION}
+./bin/set_version.sh ${VERSION}
 git commit -m "initiate release ${VERSION}" -a
 git push origin release || exit 1
 # git checkout -

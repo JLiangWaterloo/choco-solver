@@ -54,19 +54,22 @@ import java.util.Set;
  */
 public class StoredDirectedMultiGraph {
 
-    int[] starts;
-    public int[] offsets;
+    private int[] starts;
+    private int[] offsets;
 
     public int sourceIndex;
     public int tinIndex;
     public int nbR;
 
 
-    StoredIndexedBipartiteSetWithOffset[] supports;
+    private StoredIndexedBipartiteSetWithOffset[] supports;
     public StoredIndexedBipartiteSetWithOffset[] layers;
-    FastPathFinder pf;
+    private FastPathFinder pf;
     public BitSet inStack;
     private IntVar[] z;
+
+    public Nodes GNodes;
+    public Arcs GArcs;
 
     public void delayedBoundUpdate(TIntStack toRemove, IntVar[] z, int... dim) {
         for (int i = 0; i < offsets.length; i++) {
@@ -93,7 +96,6 @@ public class StoredDirectedMultiGraph {
             iter.dispose();
         }
     }
-
 
     public class Nodes {
         public int[] states;
@@ -123,20 +125,13 @@ public class StoredDirectedMultiGraph {
 
     }
 
-
     public class Arcs {
         public int[] values;
         public int[] dests;
         public int[] origs;
         public double[][] originalCost;
         public double[] temporaryCost;
-
-
     }
-
-
-    public Nodes GNodes;
-    public Arcs GArcs;
 
 
     public StoredDirectedMultiGraph(IEnvironment environment,
@@ -649,6 +644,4 @@ public class StoredDirectedMultiGraph {
         }
         return result;
     }
-
-
 }

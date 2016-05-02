@@ -59,17 +59,15 @@ import java.util.HashSet;
  */
 public class PropRegular extends Propagator<IntVar> {
 
-    StoredDirectedMultiGraph graph;
-    final IAutomaton automaton;
-    static int num;
-    int _num;
+    private StoredDirectedMultiGraph graph;
+    private final IAutomaton automaton;
+    private static int num;
 
-    protected final RemProc rem_proc;
-    protected final IIntDeltaMonitor[] idms;
+    private final RemProc rem_proc;
+    private final IIntDeltaMonitor[] idms;
 
     public PropRegular(IntVar[] variables, IAutomaton automaton) {
         super(variables, PropagatorPriority.LINEAR, true);
-        _num = num++;
         this.idms = new IIntDeltaMonitor[this.vars.length];
         for (int i = 0; i < this.vars.length; i++) {
             idms[i] = this.vars[i].monitorDelta(this);

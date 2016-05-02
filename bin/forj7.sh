@@ -47,7 +47,7 @@ mvn -q -P release clean javadoc:jar source:jar deploy -DskipTests ||quit "Unable
 echo "** Prepare develop for the next version **"
 git checkout develop ||quit "Unable to checkout develop"
 git merge --no-ff ${TAG} ||quit "Unable to integrate to develop"
-./src/scripts/set_version.sh --next ${VERSION}
+./bin/set_version.sh --next ${VERSION}
 git commit -m "Prepare the code for the next version" -a ||quit "Unable to commit to develop"
 
 #Push changes on develop, with the tag

@@ -49,7 +49,7 @@ public class PropScalar extends PropSum {
     /**
      * The coefficients
      */
-    final int[] c;
+    private final int[] c;
 
     /**
      * Create a scalar product: SUM(x_i*c_i) o b
@@ -88,7 +88,7 @@ public class PropScalar extends PropSum {
 
 
     @Override
-    void filterOnEq() throws ContradictionException {
+    protected void filterOnEq() throws ContradictionException {
         boolean anychange;
         int F = b - sumLB;
         int E = sumUB - b;
@@ -154,7 +154,7 @@ public class PropScalar extends PropSum {
     }
 
     @Override
-    void filterOnLeq() throws ContradictionException {
+    protected void filterOnLeq() throws ContradictionException {
         int F = b - sumLB;
         int E = sumUB - b;
         if (F < 0) {
@@ -193,7 +193,7 @@ public class PropScalar extends PropSum {
     }
 
     @Override
-    void filterOnGeq() throws ContradictionException {
+    protected void filterOnGeq() throws ContradictionException {
         int F = b - sumLB;
         int E = sumUB - b;
         if (E < 0) {
@@ -232,7 +232,7 @@ public class PropScalar extends PropSum {
     }
 
     @Override
-    void filterOnNeq() throws ContradictionException {
+    protected void filterOnNeq() throws ContradictionException {
         int F = b - sumLB;
         int E = sumUB - b;
         if (F < 0 || E < 0) {
@@ -242,7 +242,7 @@ public class PropScalar extends PropSum {
         int w = -1;
         int sum = 0;
         for (int i = 0; i < l; i++) {
-            if (!vars[i].isInstantiated()) {
+            if (vars[i].isInstantiated()) {
                 sum += vars[i].getValue() * c[i];
             } else if (w == -1) {
                 w = i;
@@ -252,8 +252,8 @@ public class PropScalar extends PropSum {
             if (sum == b) {
                 this.fails();
             }
-        } else {
-            vars[w].removeValue(w < pos ? b - sum : b + sum, this);
+        } else if(c[w]!=0 && (b - sum)%c[w]==0){
+            vars[w].removeValue((b - sum)/c[w], this);
         }
     }
 

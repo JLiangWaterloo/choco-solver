@@ -270,8 +270,6 @@ public class ExplanationTest {
                         break;
                 }
                 model.getSolver().showStatistics();
-                model.getSolver().showSolutions();
-                model.getSolver().showDecisions();
                 assertFalse(model.solve());
             }
         }
@@ -304,8 +302,6 @@ public class ExplanationTest {
                         break;
                 }
                 model.getSolver().showStatistics();
-                model.getSolver().showSolutions();
-                model.getSolver().showDecisions();
                 assertFalse(model.solve());
             }
         }
@@ -331,8 +327,6 @@ public class ExplanationTest {
             model.getSolver().set(inputOrderLBSearch(p[0], p[1], bs[0], p[2], p[3], p[4]));
             model.getSolver().setDBTLearning(ng == 1, false);
             model.getSolver().showStatistics();
-            model.getSolver().showSolutions();
-            model.getSolver().showDecisions();
             assertFalse(model.solve());
         }
     }
@@ -397,7 +391,7 @@ public class ExplanationTest {
         vs[4] = model.intVar("B", -5, -2);
         model.arithm(vs[0], "+", vs[4],"=", 0).post();
         model.getSolver().set(SearchStrategyFactory.intVarSearch(
-                inputOrderVar(),
+                inputOrderVar(model),
                 midIntVal(dop != DecisionOperator.int_reverse_split),
                 dop,
                 vs[var])

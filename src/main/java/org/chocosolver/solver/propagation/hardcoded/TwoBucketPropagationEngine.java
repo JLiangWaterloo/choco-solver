@@ -29,7 +29,6 @@
  */
 package org.chocosolver.solver.propagation.hardcoded;
 
-import org.chocosolver.memory.IEnvironment;
 import org.chocosolver.solver.ICause;
 import org.chocosolver.solver.Model;
 import org.chocosolver.solver.Settings;
@@ -82,22 +81,17 @@ public class TwoBucketPropagationEngine implements IPropagationEngine {
     /**
      * Reference to the model declaring this propagation engine.
      */
-    protected final Model model;
+    private final Model model;
 
     /**
      * The singleton exception to use (and to configure) when a contradiction is detected.
      */
-    protected final ContradictionException exception;
-
-    /**
-     * Structure which manages backtrackable objects.
-     */
-    protected final IEnvironment environment;
+    private final ContradictionException exception;
 
     /**
      * List of propagators.
      */
-    protected Propagator[] propagators;
+    private Propagator[] propagators;
 
     /**
      * When debugging is required, set this parameter to <tt>true</tt>.
@@ -133,54 +127,54 @@ public class TwoBucketPropagationEngine implements IPropagationEngine {
     /**
      * Mapping between propagators' ID and their index in the list of propagators.
      */
-    protected IntMap p2i;
+    private IntMap p2i;
 
     /**
      * Reference to the last propagator executed, for flushing purpose.
      */
-    protected Propagator lastProp;
+    private Propagator lastProp;
 
     /**
      * Indicates which queues are not empty.
      */
-    protected int notEmpty; // point out the no empty queues
+    private int notEmpty; // point out the no empty queues
 
     /**
      * Queue of propagators to execute on fine events.
      */
-    protected ArrayDeque<Propagator>[] pro_queue_f;
+    private ArrayDeque<Propagator>[] pro_queue_f;
 
     /**
      * Indicates which propagators are currently scheduled for fine event propagation.
      * More efficient than calling <code>pro_queue_f.contains(p)</code>.
      */
-    protected boolean[] schedule_f;
+    private boolean[] schedule_f;
 
     /**
      * Stores, for each propagator, the index of modified variables until the last propagation.
      */
-    protected IntCircularQueue[] event_f;
+    private IntCircularQueue[] event_f;
 
     /**
      * Stores, for each couple (propagator - variable), the fine event to propagate.
      */
-    protected int[][] eventmasks;
+    private int[][] eventmasks;
 
     /**
      * Queue of propagators to execute on coarse events.
      */
-    protected ArrayDeque<Propagator>[] pro_queue_c;
+    private ArrayDeque<Propagator>[] pro_queue_c;
 
     /**
      * Indicates which propagators are currently scheduled for coarse event propagation.
      * More efficient than calling <code>pro_queue_c.contains(p)</code>.
      */
-    protected boolean[] schedule_c;
+    private boolean[] schedule_c;
 
     /**
      * Stores, for each propagator, the coarse event to propagate.
      */
-    protected PropagatorEventType[] event_c;
+    private PropagatorEventType[] event_c;
 
     /**
      * Set to <tt>true</tt> when this propagation engine is initialized, thus after {@link #initialize()}.
@@ -190,13 +184,13 @@ public class TwoBucketPropagationEngine implements IPropagationEngine {
     /**
      * A specfic propagation engine which only deals with first propagation of propagators.
      */
-    final PropagationTrigger trigger; // an object that starts the propagation
+    private final PropagationTrigger trigger; // an object that starts the propagation
 
     /**
      * For debugging purpose only.
      * Indicates what to do when a propagator is suspected to not be idempotent, nothing by default.
      */
-    final Settings.Idem idemStrat;
+    private final Settings.Idem idemStrat;
 
     /**
      * Creates a two-bucket propagation engine.
@@ -207,7 +201,6 @@ public class TwoBucketPropagationEngine implements IPropagationEngine {
      */
     public TwoBucketPropagationEngine(Model model) {
         this.exception = new ContradictionException();
-        this.environment = model.getEnvironment();
         this.trigger = new PropagationTrigger(this, model);
         this.idemStrat = model.getSettings().getIdempotencyStrategy();
         this.model = model;
@@ -409,6 +402,7 @@ public class TwoBucketPropagationEngine implements IPropagationEngine {
             }
             notEmpty = notEmpty & ~(1 << i);
         }
+        lastProp = null;
     }
 
     private void flushFine() {

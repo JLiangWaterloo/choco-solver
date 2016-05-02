@@ -30,7 +30,10 @@
 package org.chocosolver.solver.search.loop.learn;
 
 import org.chocosolver.solver.Model;
-import org.chocosolver.solver.explanations.*;
+import org.chocosolver.solver.explanations.ArrayEventStore;
+import org.chocosolver.solver.explanations.Explanation;
+import org.chocosolver.solver.explanations.IExplanationEngine;
+import org.chocosolver.solver.explanations.RuleStore;
 import org.chocosolver.solver.search.loop.monitors.IMonitorInitialize;
 import org.chocosolver.solver.search.strategy.decision.Decision;
 import org.chocosolver.solver.search.strategy.decision.DecisionPath;
@@ -55,19 +58,19 @@ public class LearnDBT extends LearnCBJ {
     /**
      * The strategy which provides already computed decisions unrelated to the last conflict.
      */
-    final DBTstrategy dbTstrategy;
+    private final DBTstrategy dbTstrategy;
 
     /**
      * Because computing explanation can be lazy, a {@link RuleStore} is needed to continue computing partial explanations.
      * A reference to the one used by the explanation engine is thus needed.
      */
-    final RuleStore mRuleStore;
+    private final RuleStore mRuleStore;
 
     /**
      * Because computing explanation can be lazy, a {@link ArrayEventStore} is needed to continue computing partial explanations.
      * A reference to the one used by the explanation engine is thus needed.
      */
-    final ArrayEventStore mEventStore;
+    private final ArrayEventStore mEventStore;
 
     /**
      * Create a Dynamic Backtracking strategy.
@@ -90,7 +93,7 @@ public class LearnDBT extends LearnCBJ {
      */
     @SuppressWarnings({"unchecked", "ThrowableResultOfMethodCallIgnored"})
     @Override
-    void identifyRefutedDecision(int nworld) {
+    protected void identifyRefutedDecision(int nworld) {
         dbTstrategy.clear();
         if (nworld == 1 || mModel.getSolver().getEngine().getContradictionException().c == mModel.getSolver().getObjectiveManager()) {
             super.identifyRefutedDecision(nworld);

@@ -32,6 +32,7 @@ package org.chocosolver.solver.constraints.ternary;
 import org.chocosolver.solver.constraints.Propagator;
 import org.chocosolver.solver.constraints.PropagatorPriority;
 import org.chocosolver.solver.exception.ContradictionException;
+import org.chocosolver.solver.exception.SolverException;
 import org.chocosolver.solver.explanations.RuleStore;
 import org.chocosolver.solver.variables.IntVar;
 import org.chocosolver.solver.variables.events.IEventType;
@@ -46,13 +47,12 @@ import org.chocosolver.util.ESat;
  * @author Charles Prud'homme
  * @since 19/04/11
  */
-public class
-        PropMinBC extends Propagator<IntVar> {
+public class PropMinBC extends Propagator<IntVar> {
 
-    IntVar BST, v1, v2;
+    private IntVar BST, v1, v2;
 
     public PropMinBC(IntVar X, IntVar Y, IntVar Z) {
-        super(new IntVar[]{X, Y, Z}, PropagatorPriority.TERNARY, true);
+        super(new IntVar[]{X, Y, Z}, PropagatorPriority.TERNARY, false);
         this.BST = vars[0];
         this.v1 = vars[1];
         this.v2 = vars[2];
@@ -68,12 +68,6 @@ public class
         filter();
     }
 
-
-    @Override
-    public void propagate(int varIdx, int mask) throws ContradictionException {
-        propagate(0);
-    }
-
     private void filter() throws ContradictionException {
         int c = 0;
         c += (vars[0].isInstantiated() ? 1 : 0);
@@ -83,7 +77,6 @@ public class
             case 7: // everything is instantiated
             case 6:// Z and Y are instantiated
                 vars[0].instantiateTo(Math.min(vars[1].getValue(), vars[2].getValue()), this);
-                setPassive();
                 break;
             case 5: //  X and Z are instantiated
             {
@@ -91,7 +84,6 @@ public class
                 int val2 = vars[2].getValue();
                 if (best < val2) {
                     vars[1].instantiateTo(best, this);
-                    setPassive();
                 } else if (best > val2) {
                     contradiction(vars[2], "wrong min selected");
                 } else { // X = Z
@@ -103,8 +95,9 @@ public class
             {
                 int val = vars[2].getValue();
                 if (val < vars[1].getLB()) { // => X = Z
-                    vars[0].instantiateTo(val, this);
-                    setPassive();
+                    if(vars[0].instantiateTo(val, this)) {
+                        setPassive();
+                    }
                 } else {
                     _filter();
                 }
@@ -116,7 +109,6 @@ public class
                 int val1 = vars[1].getValue();
                 if (best < val1) {
                     vars[2].instantiateTo(best, this);
-                    setPassive();
                 } else if (best > val1) {
                     contradiction(vars[1], "");
                 } else { // X = Y
@@ -128,8 +120,9 @@ public class
             {
                 int val = vars[1].getValue();
                 if (val < vars[2].getLB()) { // => X = Y
-                    vars[0].instantiateTo(val, this);
-                    setPassive();
+                    if(vars[0].instantiateTo(val, this)) {
+                        setPassive();
+                    }
                 } else { // val in Z
                     _filter();
                 }
@@ -142,11 +135,13 @@ public class
                     contradiction(vars[0], null);
                 }
                 if (vars[1].getLB() > best) {
-                    vars[2].instantiateTo(best, this);
-                    setPassive();
+                    if(vars[2].instantiateTo(best, this)) {
+                        setPassive();
+                    }
                 } else if (vars[2].getLB() > best) {
-                    vars[1].instantiateTo(best, this);
-                    setPassive();
+                    if(vars[1].instantiateTo(best, this)) {
+                        setPassive();
+                    }
                 } else {
                     if (vars[1].updateLowerBound(best, this) | vars[2].updateLowerBound(best, this)) {
                         filter(); // to ensure idempotency for "free"
@@ -158,6 +153,7 @@ public class
             case 0: // otherwise
                 _filter();
                 break;
+            default: throw new SolverException("Unexpected mask "+c);
         }
     }
 
@@ -240,7 +236,7 @@ public class
                     }
                 }
                 if (IntEventType.isDecupp(evt.getMask())) {
-                    newrules |= ruleStore.addUpperBoundRule(vars[0]);
+                    newrules |= ruleStore.addLowerBoundRule(vars[0]);
                     newrules |= ruleStore.addLowerBoundRule(vars[i]);
                 }
             }

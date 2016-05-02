@@ -69,7 +69,6 @@ public class HeightCumulFilter extends SweepCumulFilter {
 		tprune.resetQuick();
 		int capa = capamax.getUB();
 		int currentConso = 0;
-		boolean active = false;
 		while(timeIndex<nbEvents) {
 			// see next event
 			int nextDate = events[timeIndex].date;
@@ -95,21 +94,19 @@ public class HeightCumulFilter extends SweepCumulFilter {
 			// handle the current event
 			Event event = events[timeIndex++];
 			currentDate = event.date;
-			switch(event.type) {
-				case(SCP):
-					currentConso += hlb[event.index];
-					// filter the capa max LB from the compulsory part consumptions
-					capamax.updateLowerBound(currentConso, aCause);
-					if(!h[map[event.index]].isInstantiated()){
-						tprune.add(event.index);
-					}
-					break;
-				case(ECP):
-					currentConso -= hlb[event.index];
-					break;
+			if(event.type == SCP) {
+				currentConso += hlb[event.index];
+				// filter the capa max LB from the compulsory part consumptions
+				capamax.updateLowerBound(currentConso, aCause);
+				if (!h[map[event.index]].isInstantiated()) {
+					tprune.add(event.index);
+				}
+			}else{
+				assert event.type == ECP;
+				currentConso -= hlb[event.index];
 			}
 		}
-		return active;
+		return false;
 	}
 
 	protected void generateMinEvents(int nbT) {

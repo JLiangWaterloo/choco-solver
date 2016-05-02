@@ -27,41 +27,64 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-package org.chocosolver.solver.constraints.ternary;
+package org.chocosolver.solver.constraints.set;
 
-import org.chocosolver.solver.constraints.Constraint;
-import org.chocosolver.solver.constraints.Operator;
-import org.chocosolver.solver.exception.SolverException;
+import org.chocosolver.solver.Model;
 import org.chocosolver.solver.variables.IntVar;
-import org.chocosolver.util.tools.ArrayUtils;
+import org.chocosolver.solver.variables.SetVar;
+import org.chocosolver.util.ESat;
+import org.testng.annotations.Test;
+
+import static org.testng.Assert.*;
 
 /**
- * <br/>
- * |X-Y| OP Z
- *
- * @author Charles Prud'homme
- * @since 06/04/12
+ * @author Jean-Guillaume FAGES
  */
-public class DistanceXYZ extends Constraint {
+public class IntCstMemberTest {
 
+    @Test(groups = "1s", timeOut=60000)
+    public void testNominal() {
+        Model model = new Model();
 
-    final IntVar X, Y, Z;
-    final Operator OP;
+        IntVar var = model.intVar(10);
+        SetVar setVar = model.setVar(new int[]{}, new int[]{1, 2, 3, 4, 5, 6, 7, 8, 9, 10});
+        model.member(var, setVar).post();
 
-
-    public DistanceXYZ(IntVar x, IntVar y, Operator op, IntVar z) {
-        super("DistanceXYZ " + op.name(), new PropDistanceXYZ(ArrayUtils.toArray(x, y, z), op));
-        if (op != Operator.EQ && op != Operator.GT && op != Operator.LT) {
-            throw new SolverException("Unexpected operator for distance");
-        }
-        this.X = x;
-        this.Y = y;
-        this.Z = z;
-        this.OP = op;
+        assertEquals(model.getSolver().isSatisfied(), ESat.UNDEFINED);
+        checkSolutions(model, setVar, var.getValue());
     }
 
-//  will be ok once every operator is be supported
-//	public Constraint makeOpposite(){
-//		return new DistanceXYZ(X,Y,Operator.getOpposite(OP),Z);
-//	}
+    @Test(groups = "1s", timeOut=60000)
+    public void testFalse() {
+        Model model = new Model();
+
+        IntVar var = model.intVar(12);
+        SetVar setVar = model.setVar(new int[]{10}, new int[]{1, 2, 3, 4, 5, 6, 7, 8, 9, 10});
+        model.member(var, setVar).post();
+
+        assertEquals(model.getSolver().isSatisfied(), ESat.FALSE);
+        assertFalse(model.solve());
+    }
+
+    @Test(groups = "1s", timeOut=60000)
+    public void testTrue() {
+        Model model = new Model();
+
+        int var = 10;
+        SetVar setVar = model.setVar(new int[]{10}, new int[]{1, 2, 3, 4, 5, 6, 7, 8, 9, 10});
+        model.member(var, setVar).post();
+
+        assertEquals(model.getSolver().isSatisfied(), ESat.TRUE);
+        checkSolutions(model, setVar, var);
+    }
+
+    private int checkSolutions(Model model, SetVar set, int value) {
+        int nbSol = 0;
+        while(model.solve()) {
+            nbSol++;
+            assertTrue(set.getValue().contain(value));
+        }
+        assertTrue(nbSol > 0);
+        return nbSol;
+    }
 }

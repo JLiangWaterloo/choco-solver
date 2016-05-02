@@ -58,13 +58,13 @@ import org.chocosolver.util.ESat;
  */
 public class PropNotEqualXY_C extends Propagator<IntVar> {
 
-    IntVar x;
-    IntVar y;
-    int cste;
+    private IntVar x;
+    private IntVar y;
+    private int cste;
 
     @SuppressWarnings({"unchecked"})
     public PropNotEqualXY_C(IntVar[] vars, int c) {
-        super(vars, PropagatorPriority.BINARY, true);
+        super(vars, PropagatorPriority.BINARY, false);
         this.x = vars[0];
         this.y = vars[1];
         this.cste = c;
@@ -81,30 +81,15 @@ public class PropNotEqualXY_C extends Propagator<IntVar> {
     @Override
     public void propagate(int evtmask) throws ContradictionException {
         if (x.isInstantiated()) {
-            removeValV1();
+            if (y.removeValue(cste - x.getValue(), this) || !y.contains(cste - x.getValue())) {
+                this.setPassive();
+            }
         } else if (y.isInstantiated()) {
-            removeValV0();
+            if (x.removeValue(cste - y.getValue(), this) || !x.contains(cste - y.getValue())) {
+                this.setPassive();
+            }
         } else if (x.getLB() + y.getLB() > cste || x.getUB() + y.getUB() < cste) {
             setPassive();
-        }
-    }
-
-    @Override
-    public void propagate(int varIdx, int mask) throws ContradictionException {
-        propagate(0);
-    }
-
-    private void removeValV0() throws ContradictionException {
-        if (x.removeValue(cste - y.getValue(), this)
-                || !x.contains(cste - y.getValue())) {
-            this.setPassive();
-        }
-    }
-
-    private void removeValV1() throws ContradictionException {
-        if (y.removeValue(cste - x.getValue(), this)
-                || !y.contains(cste - x.getValue())) {
-            this.setPassive();
         }
     }
 

@@ -29,7 +29,7 @@
  */
 package org.chocosolver.solver.constraints.reification;
 
-import org.chocosolver.memory.structure.Operation;
+import org.chocosolver.memory.structure.IOperation;
 import org.chocosolver.solver.constraints.Constraint;
 import org.chocosolver.solver.constraints.Propagator;
 import org.chocosolver.solver.constraints.PropagatorPriority;
@@ -50,8 +50,8 @@ import org.chocosolver.util.ESat;
  */
 public abstract class PropConditionnal extends Propagator<Variable> {
 
-    Constraint[] condTrue;
-    Constraint[] condFalse;
+    private Constraint[] condTrue;
+    private Constraint[] condFalse;
 
     /**
      * @param vars2observe set of variables to observe, their modifications triggers the condition checking
@@ -85,7 +85,7 @@ public abstract class PropConditionnal extends Propagator<Variable> {
         model.postTemp(c);
         // the constraint has been added during the resolution.
         // it should be removed on backtrack -> create a new undo operation
-        model.getEnvironment().save(new Operation() {
+        model.getEnvironment().save(new IOperation() {
             @Override
             public void undo() {
                 model.unpost(c);

@@ -154,7 +154,7 @@ public class CodeGenerator {
 
             if (file.isDirectory()) {
                 // Ignore CVS directories
-                if (file.getName().equals("CVS")) continue;
+                if ("CVS".equals(file.getName())) continue;
 
                 scanForFiles(file, new File(output_directory, file.getName()));
                 continue;
@@ -177,7 +177,7 @@ public class CodeGenerator {
 
         file_name = file_name.replaceAll("\\.template", ".java");
 
-        File output_file = new File(output_directory, file_name);
+//        File output_file = new File(output_directory, file_name);
 
         // See what kind of template markers it's using, either e or k/v. No marker
         // indicates a replication-only class.
@@ -241,7 +241,7 @@ public class CodeGenerator {
     }
 
 
-    static String processReplication(String content,
+    private static String processReplication(String content,
                                      Map<Integer, String> replicated_blocks) {
 
         for (Map.Entry<Integer, String> entry : replicated_blocks.entrySet()) {
@@ -404,9 +404,9 @@ public class CodeGenerator {
      * Abbreviate the type for Integer and Character
      */
     private static String abbreviate(String type) {
-        if (type.equals("Integer")) {
+        if ("Integer".equals(type)) {
             return "Int";
-        } else if (type.equals("Character")) {
+        } else if ("Character".equals(type)) {
             return "Char";
         }
         return type;
@@ -451,7 +451,7 @@ public class CodeGenerator {
      * @return Null if no definition blocks are found, otherwise a map
      *         containing the blocks, keyed by their number.
      */
-    static Map<Integer, String> findReplicatedBlocks(String content_in,
+    private static Map<Integer, String> findReplicatedBlocks(String content_in,
                                                      StringBuilder content_out) throws IOException {
 
         Map<Integer, String> to_return = null;
@@ -499,14 +499,12 @@ public class CodeGenerator {
         return to_return;
     }
 
-
     private static String simplifyPath(File file) {
         String output_string = root_output_dir.toString();
 
         String file_string = file.toString();
         return file_string.substring(output_string.length() + 1);
     }
-
 
     private static void copyFile(File source, File dest) throws IOException {
         FileChannel srcChannel = new FileInputStream(source).getChannel();
@@ -519,13 +517,12 @@ public class CodeGenerator {
         dstChannel.close();
     }
 
-
     private static class WrapperInfo {
-        final String primitive;
-        final String class_name;
-        final String max_value;
-        final String min_value;
-        final String size;
+        private final String primitive;
+        private final String class_name;
+        private final String max_value;
+        private final String min_value;
+        private final String size;
 
         WrapperInfo(String primitive, String class_name, String max_value,
                     String min_value, String size) {

@@ -37,7 +37,6 @@ import org.chocosolver.solver.Model;
 import org.chocosolver.solver.constraints.nary.cnf.ILogical;
 import org.chocosolver.solver.constraints.nary.cnf.LogOp;
 import org.chocosolver.solver.constraints.nary.cnf.LogicTreeToolBox;
-import org.chocosolver.solver.constraints.reification.PropConDis;
 import org.chocosolver.solver.variables.BoolVar;
 
 /**
@@ -477,14 +476,11 @@ public interface ISatFactory extends ISelf<Model> {
     }
 
     /**
-     * Make an constructive disjunction constraint
+     * Posts a constructive disjunction constraint
      *
      * @param BOOLS an array of boolean variable
-     * @return <tt>true</tt> if the disjunction has been added to the constructive disjunction store.
      */
-    default boolean addConstructiveDisjunction(BoolVar... BOOLS) {
-        PropConDis condis = _me().getConDisStore().getPropCondis();
-        condis.addDisjunction(BOOLS);
-        return true;
+    default void addConstructiveDisjunction(BoolVar... BOOLS) {
+        _me().getConDisStore().getPropCondis().addDisjunction(BOOLS);
     }
 }

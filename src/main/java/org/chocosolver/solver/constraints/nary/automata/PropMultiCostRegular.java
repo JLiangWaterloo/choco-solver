@@ -111,103 +111,74 @@ public final class PropMultiCostRegular extends Propagator<IntVar> {
     public final TObjectIntHashMap<IntVar> map;
 
     /**
-     * The last computed Shortest Path
-     */
-    public int[] lastSp;
-    public double lastSpValue;
-
-
-    /**
-     * The last computed Longest Path
-     */
-    public int[] lastLp;
-    public double lastLpValue;
-
-
-    /**
      * Decision variables
      */
-    protected final IntVar[] vs;
+    private final IntVar[] vs;
 
-    protected final int offset;
+    private final int offset;
 
     /**
      * Cost variables
      */
-    public final IntVar[] z;
-
-/**
- * Integral costs : c[i][j][k][s] is the cost over dimension k of x_i = j on state s
- */
-//protected final int[][][][] costs;
+    private final IntVar[] z;
 
     /**
      * The finite automaton which defines the regular language the variable sequence must belong
      */
-    protected final ICostAutomaton pi;
+    private final ICostAutomaton pi;
 
     /**
      * Layered graph of the unfolded automaton
      */
-    protected StoredDirectedMultiGraph graph;
+    private StoredDirectedMultiGraph graph;
 
     /**
      * Boolean array which record whether a bound has been modified by the propagator
      */
-    protected final boolean[] modifiedBound;
-
-/**
- * Cost to be applied to the graph for a given relaxation
- */
-// protected final double[][] newCosts;
+    private final boolean[] modifiedBound;
 
     /**
      * Lagrangian multiplier container to compute an UB
      */
-    protected final double[] uUb;
+    private final double[] uUb;
 
     /**
      * Lagrangian multiplier container to compute a LB
      */
-    protected final double[] uLb;
+    private final double[] uLb;
 
     /**
      * Instance of the class containing all path finding algorithms
      * Also contains graph filtering algorithms
      */
-    protected FastPathFinder slp;
+    private FastPathFinder slp;
 
     /**
      * Store the number of resources = z.length
      */
-    protected final int nbR;
+    private final int nbR;
 
 
     /**
      * Stack to store removed edges index, for delayed update
      */
-    protected final TIntStack toRemove;
+    private final TIntStack toRemove;
 
-    protected final TIntStack[] toUpdateLeft;
-    protected final TIntStack[] toUpdateRight;
+    private final TIntStack[] toUpdateLeft;
+    private final TIntStack[] toUpdateRight;
 
-    /**
-     * Buffer to check whether an arc needs to be removed.
-     */
-    protected final TIntHashSet removed = new TIntHashSet();
-
-    public int lastWorld = -1;
-    public long lastNbOfBacktracks = -1;
-    public long lastNbOfRestarts = -1;
+    private int lastWorld = -1;
+    private long lastNbOfBacktracks = -1;
+    private long lastNbOfRestarts = -1;
     private TIntHashSet boundUpdate;
     private boolean computed;
 
-    protected final IIntDeltaMonitor[] idms;
-    protected final RemProc rem_proc;
+    private final IIntDeltaMonitor[] idms;
+    private final RemProc rem_proc;
 
     public final double _MCR_DECIMAL_PREC;
 
-    protected final IntIterableSet vrms;
+    private final IntIterableSet vrms;
 
     /**
      * Constructs a multi-cost-regular propagator
@@ -284,15 +255,13 @@ public final class PropMultiCostRegular extends Propagator<IntVar> {
     @Override
     public void propagate(int evtmask) throws ContradictionException {
         if (PropagatorEventType.isFullPropagation(evtmask)) {
-            // as the graph was build on initial domain, this is allowed (specific case)
-            for (int i = 0; i < idms.length; i++) {
-                idms[i].freeze();
-                idms[i].forEachRemVal(rem_proc.set(i));
-                idms[i].unfreeze();
-            }
             initialize();
         }
         filter();
+		// added by JG: the propagator should be idempotent so it should not iterate over its own removals
+		for (int i = 0; i < idms.length; i++) {
+			idms[i].unfreeze();
+		}
     }
 
     @Override
@@ -575,9 +544,6 @@ public final class PropMultiCostRegular extends Propagator<IntVar> {
             k++;
 
         } while (modif && nbNSig2 < MAXNONIMPROVEITER && k < MAXBOUNDITER);
-        this.lastLp = P;
-        this.lastLpValue = lp + coeff;
-
     }
 
 
@@ -665,8 +631,6 @@ public final class PropMultiCostRegular extends Propagator<IntVar> {
             }
             k++;
         } while (modif && nbNSig2 < MAXNONIMPROVEITER && k < MAXBOUNDITER);
-        this.lastSp = bestPath;
-        this.lastSpValue = bestVal;
     }
 
 

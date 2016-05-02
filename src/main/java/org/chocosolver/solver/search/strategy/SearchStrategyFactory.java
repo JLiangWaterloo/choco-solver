@@ -29,7 +29,9 @@
  */
 package org.chocosolver.solver.search.strategy;
 
+import org.chocosolver.solver.Model;
 import org.chocosolver.solver.ResolutionPolicy;
+import org.chocosolver.solver.Solver;
 import org.chocosolver.solver.search.strategy.assignments.DecisionOperator;
 import org.chocosolver.solver.search.strategy.selectors.IntValueSelector;
 import org.chocosolver.solver.search.strategy.selectors.RealValueSelector;
@@ -38,9 +40,10 @@ import org.chocosolver.solver.search.strategy.selectors.VariableSelector;
 import org.chocosolver.solver.search.strategy.selectors.variables.ActivityBased;
 import org.chocosolver.solver.search.strategy.selectors.variables.DomOverWDeg;
 import org.chocosolver.solver.search.strategy.strategy.*;
-import org.chocosolver.solver.variables.IntVar;
-import org.chocosolver.solver.variables.RealVar;
-import org.chocosolver.solver.variables.SetVar;
+import org.chocosolver.solver.variables.*;
+
+import java.util.ArrayList;
+import java.util.List;
 
 import static org.chocosolver.solver.search.strategy.selectors.ValSelectorFactory.*;
 import static org.chocosolver.solver.search.strategy.selectors.VarSelectorFactory.*;
@@ -168,8 +171,20 @@ public class SearchStrategyFactory {
      * @return a default search strategy
      */
     public static AbstractStrategy<IntVar> intVarSearch(IntVar... vars) {
+        // sets booleans to 1 and intvar to upper bound for maximisation
+        // branch on lower bound otherwise
         boolean satOrMin = vars[0].getModel().getResolutionPolicy()!= ResolutionPolicy.MAXIMIZE;
-        return new DomOverWDeg(vars, 0, satOrMin?minIntVal():maxIntVal());
+        IntValueSelector valSel = new IntValueSelector() {
+            @Override
+            public int selectValue(IntVar var) {
+                if(var.isBool() || !satOrMin){
+                    return var.getUB();
+                }else {
+                    return var.getLB();
+                }
+            }
+        };
+        return new DomOverWDeg(vars, 0, valSel);
     }
 
     /**
@@ -208,7 +223,7 @@ public class SearchStrategyFactory {
     public static IntStrategy randomSearch(IntVar[] vars, long seed) {
         IntValueSelector value = randomIntVal(seed);
         IntValueSelector bound = randomIntBound(seed);
-        IntValueSelector selector = (IntValueSelector) var -> {
+        IntValueSelector selector = var -> {
             if (var.hasEnumeratedDomain()) {
                 return value.selectValue(var);
             } else {
@@ -228,7 +243,7 @@ public class SearchStrategyFactory {
      * @return int strategy based on value assignments
      */
     public static IntStrategy inputOrderLBSearch(IntVar... vars) {
-        return intVarSearch(inputOrderVar(), minIntVal(), vars);
+        return intVarSearch(inputOrderVar(vars[0].getModel()), minIntVal(), vars);
     }
 
     /**
@@ -237,7 +252,7 @@ public class SearchStrategyFactory {
      * @return assignment strategy
      */
     public static IntStrategy inputOrderUBSearch(IntVar... vars) {
-        return intVarSearch(inputOrderVar(), maxIntVal(), vars);
+        return intVarSearch(inputOrderVar(vars[0].getModel()), maxIntVal(), vars);
     }
 
     /**
@@ -246,7 +261,7 @@ public class SearchStrategyFactory {
      * @return assignment strategy
      */
     public static IntStrategy minDomLBSearch(IntVar... vars) {
-        return intVarSearch(minDomIntVar(), minIntVal(), vars);
+        return intVarSearch(minDomIntVar(vars[0].getModel()), minIntVal(), vars);
     }
 
     /**
@@ -255,6 +270,81 @@ public class SearchStrategyFactory {
      * @return assignment strategy
      */
     public static IntStrategy minDomUBSearch(IntVar... vars) {
-        return intVarSearch(minDomIntVar(), maxIntVal(), vars);
+        return intVarSearch(minDomIntVar(vars[0].getModel()), maxIntVal(), vars);
+    }
+
+    // ************************************************************************************
+    // DEFAULT STRATEGY (COMPLETE)
+    // ************************************************************************************
+
+    /**
+     * Creates a default search strategy for the given model.
+     * This heuristic is complete (handles IntVar, BoolVar, SetVar and RealVar)
+     *
+     * @param model a model requiring a default search strategy
+     */
+    public static AbstractStrategy defaultSearch(Model model){
+        Solver r = model.getSolver();
+
+        // 1. retrieve variables, keeping the declaration order, and put them in four groups:
+        List<IntVar> livars = new ArrayList<>(); // integer and boolean variables
+        List<SetVar> lsvars = new ArrayList<>(); // set variables
+        List<RealVar> lrvars = new ArrayList<>();// real variables.
+        Variable[] variables = model.getVars();
+        Variable objective = null;
+        for (Variable var : variables) {
+            int type = var.getTypeAndKind();
+            if ((type & Variable.CSTE) == 0) {
+                int kind = type & Variable.KIND;
+                switch (kind) {
+                    case Variable.BOOL:
+                    case Variable.INT: livars.add((IntVar) var); break;
+                    case Variable.SET: lsvars.add((SetVar) var); break;
+                    case Variable.REAL: lrvars.add((RealVar) var); break;
+                    default: break; // do not throw exception to allow ad hoc variable kinds
+                }
+            }
+        }
+
+        // 2. extract the objective variable if any (to avoid branching on it)
+        if (r.getObjectiveManager().isOptimization()) {
+            objective = r.getObjectiveManager().getObjective();
+            if((objective.getTypeAndKind() & Variable.REAL) != 0){
+                lrvars.remove(objective);// real var objective
+            }else{
+                assert (objective.getTypeAndKind() & Variable.INT) != 0;
+                livars.remove(objective);// bool/int var objective
+            }
+        }
+
+        // 3. Creates a default search strategy for each variable kind
+        ArrayList<AbstractStrategy> strats = new ArrayList<>();
+        if (livars.size() > 0) {
+            strats.add(intVarSearch(livars.toArray(new IntVar[livars.size()])));
+        }
+        if (lsvars.size() > 0) {
+            strats.add(setVarSearch(lsvars.toArray(new SetVar[lsvars.size()])));
+        }
+        if (lrvars.size() > 0) {
+            strats.add(realVarSearch(lrvars.toArray(new RealVar[lrvars.size()])));
+        }
+
+        // 4. lexico LB/UB branching for the objective variable
+        if (objective != null) {
+            boolean max = r.getObjectiveManager().getPolicy() == ResolutionPolicy.MAXIMIZE;
+            if((objective.getTypeAndKind() & Variable.REAL) != 0){
+                strats.add(realVarSearch(roundRobinVar(), max?maxRealVal():minRealVal(), (RealVar) objective));
+            }else{
+                strats.add(max ? minDomUBSearch((IntVar) objective) : minDomLBSearch((IntVar) objective));
+            }
+        }
+
+        // 5. avoid null pointers in case all variables are instantiated
+        if (strats.isEmpty()) {
+            strats.add(minDomLBSearch(model.ONE()));
+        }
+
+        // 6. add last conflict
+        return lastConflict(sequencer(strats.toArray(new AbstractStrategy[strats.size()])));
     }
 }
